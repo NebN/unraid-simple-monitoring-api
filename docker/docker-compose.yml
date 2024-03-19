@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "24940:24940"
+    restart: unless-stopped
+
