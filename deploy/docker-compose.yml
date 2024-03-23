@@ -1,0 +1,18 @@
+version: '3'
+
+services:
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      no_cache: false
+    # private repo
+    # image: docker.local.nebn.dev/unraid-simple-monitoring-api
+    image: nebn/unraid-simple-monitoring-api:latest
+    network_mode: host
+    ports:
+      - "24940:24940"
+    volumes:
+      - $HOST_CONF_PATH:/app/conf.yml
+    restart: unless-stopped
