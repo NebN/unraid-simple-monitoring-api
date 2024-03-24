@@ -1,8 +1,20 @@
-# Utilization with Unraid
-### Installation
+# Table of Contents
+1. [What is this](#what)
+2. [Utilization with Unraid](#unraid)
+   1. [Installation](#unraid-install)
+   2. [Configuration](#unraid-conf)
+3. [Integration with Homepage](#homepage)
+   1. [Configuration](#homepage-conf)
+
+## What is this? <a id="what"></a> 
+Simple rest API to monitor basic metrics: Disk usage and Network traffic.  
+Originally created for use with [Homepage](https://gethomepage.dev/latest/widgets/services/customapi/).
+
+## Utilization with Unraid <a id="unraid"></a> 
+### Installation <a id="unraid-install"></a>
 Install from the Unraid community apps
 
-### Configuration
+### Configuration <a id="unraid-conf"></a>
 By default the application expects a configuration file in 
 ```
 /mnt/user/appdata/unraid-simple-monitoring-api/conf.yml
@@ -24,7 +36,7 @@ disks:
     - /mnt/disk2
 ```
 
-### Utilization
+### Utilization <a id="unraid-use"></a>
 Make a request to 
 ```
 http://your-unraid-ip:24940
@@ -96,3 +108,37 @@ The response will be formatted this way.
 }
 ```
 
+## Integration with Homepage <a id="homepage"></a> 
+### Configuration <a id="homepage-conf"></a>
+Your homepage `services.yml` should look like this if you want for example cache and network data. Homepage limits the widget to 4 items.
+
+```yml
+- Category:
+   - Unraid:
+        icon: unraid.png
+        href: http://<your-unraid-api>
+        widget:
+          type: customapi
+          url: http://<your-unraid-api>:24940
+          method: GET # this doesn't matter
+          mappings:
+            - field:
+                cache_total: free
+              label: cache free
+              format: number
+              suffix: "GiB"
+            - field:
+                cache_total: free_percent
+              label: percent
+              format: percent
+            - field:
+                network_total: rx_MiBs
+              label: rx
+              format: float
+              suffix: MiB/s
+            - field:
+                network_total: tx_MiBs
+              label: tx
+              format: float
+              suffix: MiB/s
+```
