@@ -110,16 +110,17 @@ The response will be formatted this way.
 
 ## Integration with Homepage <a id="homepage"></a> 
 ### Configuration <a id="homepage-conf"></a>
+Official homepage custom API widget documentation: https://gethomepage.dev/latest/widgets/services/customapi/.  
 Your homepage `services.yml` should look like this if you want for example cache and network data. Homepage limits the widget to 4 items.
 
 ```yml
 - Category:
    - Unraid:
         icon: unraid.png
-        href: http://<your-unraid-api>
+        href: http://<your-unraid-ip>
         widget:
           type: customapi
-          url: http://<your-unraid-api>:24940
+          url: http://<your-unraid-ip>:24940
           method: GET # this doesn't matter
           mappings:
             - field:
