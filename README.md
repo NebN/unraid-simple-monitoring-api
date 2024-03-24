@@ -8,7 +8,21 @@ By default the application expects a configuration file in
 /mnt/user/appdata/unraid-simple-monitoring-api/conf.yml
 ```
 
-You can find an example file [here](https://github.com/NebN/unraid-simple-monitoring-api/blob/master/conf/conf.yml)
+You can find an example file [here](https://github.com/NebN/unraid-simple-monitoring-api/blob/master/conf/conf.yml). It should look like this
+
+
+```yaml
+networks:
+  - eth0
+  - anotherNetwork
+disks:
+  cache:
+    - /mnt/cache
+    - /another/cache/mount
+  array:
+    - /mnt/disk1
+    - /mnt/disk2
+```
 
 ### Utilization
 Make a request to 
@@ -16,7 +30,7 @@ Make a request to
 http://your-unraid-ip:24940
 ```
 
-The response will be formatted this way
+The response will be formatted this way.
 
 ```json
 {
