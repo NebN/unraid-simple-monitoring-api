@@ -5,6 +5,8 @@ services:
   api:
     build:
       context: ..
+      args: 
+        HOSTFS_PREFIX: ${HOSTFS_PREFIX}
       dockerfile: deploy/Dockerfile
       no_cache: false
     # private repo

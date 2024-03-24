@@ -6,10 +6,12 @@ test:
 docker-run:
 	sudo docker compose --env-file .env/dev.env --file deploy/docker-compose.yml up --build --force-recreate -d 
 docker-build:
-	sudo docker compose --env-file .env/dev.env --file deploy/docker-compose.yml build 
+	sudo docker compose --env-file .env/dev.env --file deploy/docker-compose.yml build --no-cache
+docker-rm:
+	sudo docker compose --env-file .env/dev.env --file deploy/docker-compose.yml rm -f
 docker-logs:
-	sudo docker logs -f $(shell sudo docker ps | grep unraid-api | cut -d " " -f 1)
+	sudo docker logs -f $(shell sudo docker ps | grep unraid-simple-monitoring-api | cut -d " " -f 1)
 docker-push: test
 	sudo docker compose --env-file .env/prod.env --file deploy/docker-compose.yml build --no-cache --push
 docker-prune:
-	sudo docker image prune -f	
+	sudo docker image prune -f && sudo docker container prune -f	
