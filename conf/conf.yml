@@ -1,9 +1,7 @@
 networks:
   - eth0
-  - enp42s0
 disks:
   cache:
-    - /
     - /mnt/cache
   array:
     - /mnt/disk1
