@@ -22,7 +22,6 @@ By default the application expects a configuration file in
 
 You can find an example file [here](https://github.com/NebN/unraid-simple-monitoring-api/blob/master/conf/conf.yml). It should look like this
 
-
 ```yaml
 networks:
   - eth0
@@ -109,6 +108,7 @@ The response will be formatted this way.
 ```
 
 ## Integration with Homepage <a id="homepage"></a> 
+![image](https://github.com/NebN/unraid-simple-monitoring-api/assets/57036949/0175ffbd-fe84-494c-a29f-264f09aae6f3)
 ### Configuration <a id="homepage-conf"></a>
 Official homepage custom API widget documentation: https://gethomepage.dev/latest/widgets/services/customapi/.  
 Your homepage `services.yml` should look like this if you want for example cache and network data. Homepage limits the widget to 4 items.
