@@ -10,8 +10,8 @@ services:
       dockerfile: deploy/Dockerfile
       no_cache: false
     # private repo
-    # image: docker.local.nebn.dev/unraid-simple-monitoring-api
-    image: nebn/unraid-simple-monitoring-api:latest
+    image: docker.local.nebn.dev/unraid-simple-monitoring-api:latest
+    #image: nebn/unraid-simple-monitoring-api:latest
     network_mode: host
     ports:
       - "24940:24940"

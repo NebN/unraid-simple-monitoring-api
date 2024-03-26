@@ -60,20 +60,24 @@ func readConf(path string) (Conf, error) {
 type handler struct {
 	NetworkMonitor monitor.NetworkMonitor
 	DiskMonitor    monitor.DiskMonitor
+	CpuMonitor     monitor.CpuMonitor
 }
 
 func NewHandler(conf Conf) (handler handler) {
 	handler.DiskMonitor = monitor.NewDiskMonitor(conf.Disks.Cache, conf.Disks.Array)
 	handler.NetworkMonitor = monitor.NewNetworkMonitor(conf.Networks)
+	handler.CpuMonitor = monitor.NewCpuMonitor()
 	return
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
 	cache, array := h.DiskMonitor.ComputeDiskUsage()
 	network := h.NetworkMonitor.ComputeNetworkRate()
 	cacheTotal := monitor.AggregateDiskStatuses(cache)
 	arrayTotal := monitor.AggregateDiskStatuses(array)
 	networkTotal := monitor.AggregateNetworkRates(network)
+	cpu := h.CpuMonitor.ComputeCpuStatus()
 
 	response := Report{
 		Cache:        cache,
@@ -82,6 +86,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ArrayTotal:   arrayTotal,
 		CacheTotal:   cacheTotal,
 		NetworkTotal: networkTotal,
+		Cpu:          cpu,
 	}
 
 	responseJson, err := json.Marshal(response)
@@ -100,4 +105,5 @@ type Report struct {
 	ArrayTotal   monitor.DiskStatus    `json:"array_total"`
 	CacheTotal   monitor.DiskStatus    `json:"cache_total"`
 	NetworkTotal monitor.NetworkRate   `json:"network_total"`
+	Cpu          monitor.CpuStatus     `json:"cpu"`
 }

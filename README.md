@@ -5,9 +5,14 @@
    2. [Configuration](#unraid-conf)
 3. [Integration with Homepage](#homepage)
    1. [Configuration](#homepage-conf)
+4. [How reliable are the measurements?](#caveat)
 
 ## What is this? <a id="what"></a> 
-Simple rest API to monitor basic metrics: Disk usage and Network traffic.  
+Simple rest API to monitor basic metrics, currently supports:
+- Disk utilization
+- Network traffic
+- CPU load
+
 Originally created for use with [Homepage](https://gethomepage.dev/latest/widgets/services/customapi/).
 
 ## Utilization with Unraid <a id="unraid"></a> 
@@ -103,6 +108,9 @@ The response will be formatted this way.
       "tx_MiBs":0.03,
       "rx_Mbps":6.84,
       "tx_Mbps":0.22
+   },
+   "cpu": {
+      "load_percent":3.79
    }
 }
 ```
@@ -143,3 +151,19 @@ Your homepage `services.yml` should look like this if you want for example cache
               format: float
               suffix: MiB/s
 ```
+
+## How reliable are the measurements? <a id="caveat"></a>
+The goal of this API is to be simple, fast, and lightweight.  
+For these reasons, the measurements provided are not as accurate as they could be.
+
+### Disk
+Disk utilization is rounded down to the nearest GiB.
+
+### Network and CPU
+Both Network and CPU usage need to be measured for some time interval. Typically, to get an accurate measurement, you would monitor these for a few seconds before providing a response.  
+To avoid having to either:
+- wait for the measurement to be completed before responding
+- continuosly measure them to have a recent measurement ready to respond with
+
+A different approach has been taken: a snapshot of Network and CPU usage is taken every time the API is called, and the response is the average Network and CPU usage between the current and last API call.
+This ensures that the response is quick and reasonably accurate, without having the process continuously read Network and CPU data even when not required.
