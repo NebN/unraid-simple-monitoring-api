@@ -121,8 +121,9 @@ func newNetworkSnapshot(iname string) (network NetworkSnapshot) {
 
 		uint64Bytes, err := strconv.ParseUint(stringBytes, 10, 64)
 		if err != nil {
-			fmt.Println("error!", err)
-			return
+			slog.Error("Cannot parse network data from /sys/class/net/",
+				slog.String("trying to parse", stringBytes),
+				slog.String("error", err.Error()))
 		}
 
 		c <- uint64Bytes
