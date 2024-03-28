@@ -34,9 +34,9 @@ type NetworkMonitor struct {
 }
 
 func NewNetworkMonitor(inames []string) (monitor NetworkMonitor) {
-	snapshots := make([]NetworkSnapshot, 0, len(inames))
-	for _, iname := range inames {
-		snapshots = append(snapshots, newNetworkSnapshot(iname))
+	snapshots := make([]NetworkSnapshot, len(inames))
+	for i, iname := range inames {
+		snapshots[i] = newNetworkSnapshot(iname)
 	}
 	monitor.snapshots = snapshots
 	return
@@ -47,26 +47,26 @@ func (monitor *NetworkMonitor) ComputeNetworkRate() []NetworkRate {
 	defer monitor.mu.Unlock()
 
 	var wg sync.WaitGroup
-	snapshotChan := make(chan NetworkSnapshot, len(monitor.snapshots))
-	rateChan := make(chan NetworkRate, len(monitor.snapshots))
+	snapshotChan := make(chan util.IndexedValue[NetworkSnapshot], len(monitor.snapshots))
+	rateChan := make(chan util.IndexedValue[NetworkRate], len(monitor.snapshots))
 
-	for _, snapshot := range monitor.snapshots {
+	for i, snapshot := range monitor.snapshots {
 		wg.Add(1)
-		go networkRate(snapshot, &wg, snapshotChan, rateChan)
+		go networkRate(i, snapshot, &wg, snapshotChan, rateChan)
 	}
 
 	wg.Wait()
 	close(snapshotChan)
 	close(rateChan)
 
-	rates := make([]NetworkRate, 0, len(monitor.snapshots))
-	snapshots := make([]NetworkSnapshot, 0, len(monitor.snapshots))
+	rates := make([]NetworkRate, len(monitor.snapshots))
+	snapshots := make([]NetworkSnapshot, len(monitor.snapshots))
 
 	for snapshot := range snapshotChan {
-		snapshots = append(snapshots, snapshot)
+		snapshots[snapshot.Index] = snapshot.Value
 	}
 	for rate := range rateChan {
-		rates = append(rates, rate)
+		rates[rate.Index] = rate.Value
 	}
 
 	monitor.snapshots = snapshots
@@ -74,7 +74,13 @@ func (monitor *NetworkMonitor) ComputeNetworkRate() []NetworkRate {
 	return rates
 }
 
-func networkRate(previousSnapshot NetworkSnapshot, wg *sync.WaitGroup, snapshotChan chan NetworkSnapshot, rateChan chan NetworkRate) {
+func networkRate(
+	index int,
+	previousSnapshot NetworkSnapshot,
+	wg *sync.WaitGroup,
+	snapshotChan chan util.IndexedValue[NetworkSnapshot],
+	rateChan chan util.IndexedValue[NetworkRate]) {
+
 	defer wg.Done()
 
 	snapshot := newNetworkSnapshot(previousSnapshot.Iname)
@@ -99,11 +105,12 @@ func networkRate(previousSnapshot NetworkSnapshot, wg *sync.WaitGroup, snapshotC
 		Iname:  previousSnapshot.Iname,
 	}
 
-	snapshotChan <- snapshot
-	rateChan <- rate
+	snapshotChan <- util.IndexedValue[NetworkSnapshot]{Index: index, Value: snapshot}
+	rateChan <- util.IndexedValue[NetworkRate]{Index: index, Value: rate}
 }
 
 func newNetworkSnapshot(iname string) (network NetworkSnapshot) {
+	network.Iname = iname
 
 	usageInBps := func(direction string, c chan uint64, ts chan time.Time) {
 
@@ -162,7 +169,6 @@ func newNetworkSnapshot(iname string) (network NetworkSnapshot) {
 	network.Tx = tx
 	network.RxTs = rxTs
 	network.TxTs = txTs
-	network.Iname = iname
 	return
 }
 
