@@ -36,19 +36,19 @@ func (monitor *DiskMonitor) ComputeDiskUsage() ([]DiskStatus, []DiskStatus) {
 	var wg sync.WaitGroup
 
 	computeGroup := func(paths []string) []DiskStatus {
-		diskChan := make(chan DiskStatus, len(paths))
+		diskChan := make(chan util.IndexedValue[DiskStatus], len(paths))
 
-		for _, path := range paths {
+		for i, path := range paths {
 			wg.Add(1)
-			go diskUsage(path, &wg, diskChan)
+			go diskUsage(i, path, &wg, diskChan)
 		}
 
 		wg.Wait()
 		close(diskChan)
 
-		disks := make([]DiskStatus, 0, len(paths))
+		disks := make([]DiskStatus, len(paths))
 		for disk := range diskChan {
-			disks = append(disks, disk)
+			disks[disk.Index] = disk.Value
 		}
 
 		return disks
@@ -60,7 +60,7 @@ func (monitor *DiskMonitor) ComputeDiskUsage() ([]DiskStatus, []DiskStatus) {
 	return cache, array
 }
 
-func diskUsage(path string, wg *sync.WaitGroup, diskChan chan DiskStatus) {
+func diskUsage(index int, path string, wg *sync.WaitGroup, diskChan chan util.IndexedValue[DiskStatus]) {
 	defer wg.Done()
 
 	var pathToQuery = path
@@ -73,6 +73,7 @@ func diskUsage(path string, wg *sync.WaitGroup, diskChan chan DiskStatus) {
 
 	if err != nil {
 		slog.Error("Cannot read disk", slog.String("path", path), slog.String("error", err.Error()))
+		diskChan <- util.IndexedValue[DiskStatus]{Index: index, Value: DiskStatus{Path: path}}
 	} else {
 		total := util.BytesToGibiBytes(usage.Total)
 		free := util.BytesToGibiBytes(usage.Free)
@@ -80,7 +81,7 @@ func diskUsage(path string, wg *sync.WaitGroup, diskChan chan DiskStatus) {
 		freePercent := util.RoundTwoDecimals((float64(free) / float64(total)) * 100)
 		usedPercent := util.RoundTwoDecimals(100 - freePercent)
 
-		diskChan <- DiskStatus{
+		status := DiskStatus{
 			Path:        path,
 			Total:       total,
 			Free:        free,
@@ -88,6 +89,8 @@ func diskUsage(path string, wg *sync.WaitGroup, diskChan chan DiskStatus) {
 			FreePercent: freePercent,
 			UsedPercent: usedPercent,
 		}
+
+		diskChan <- util.IndexedValue[DiskStatus]{Index: index, Value: status}
 	}
 }
 
