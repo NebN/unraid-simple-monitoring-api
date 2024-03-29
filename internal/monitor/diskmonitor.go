@@ -16,8 +16,8 @@ type DiskStatus struct {
 	Total       uint64  `json:"total"`
 	Used        uint64  `json:"used"`
 	Free        uint64  `json:"free"`
-	FreePercent float64 `json:"free_percent"`
 	UsedPercent float64 `json:"used_percent"`
+	FreePercent float64 `json:"free_percent"`
 }
 
 type DiskMonitor struct {

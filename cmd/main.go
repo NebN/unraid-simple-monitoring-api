@@ -61,6 +61,7 @@ type handler struct {
 	NetworkMonitor monitor.NetworkMonitor
 	DiskMonitor    monitor.DiskMonitor
 	CpuMonitor     monitor.CpuMonitor
+	MemoryMonitor  monitor.MemoryMonitor
 }
 
 func NewHandler(conf Conf) (handler handler) {
@@ -78,6 +79,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	arrayTotal := monitor.AggregateDiskStatuses(array)
 	networkTotal := monitor.AggregateNetworkRates(network)
 	cpu := h.CpuMonitor.ComputeCpuStatus()
+	memory := h.MemoryMonitor.ComputeMemoryUsage()
 
 	response := Report{
 		Cache:        cache,
@@ -87,6 +89,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		CacheTotal:   cacheTotal,
 		NetworkTotal: networkTotal,
 		Cpu:          cpu,
+		Memory:       memory,
 	}
 
 	responseJson, err := json.Marshal(response)
@@ -106,4 +109,5 @@ type Report struct {
 	CacheTotal   monitor.DiskStatus    `json:"cache_total"`
 	NetworkTotal monitor.NetworkRate   `json:"network_total"`
 	Cpu          monitor.CpuStatus     `json:"cpu"`
+	Memory       monitor.MemoryStatus  `json:"memory"`
 }

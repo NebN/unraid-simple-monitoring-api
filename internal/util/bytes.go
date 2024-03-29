@@ -19,3 +19,7 @@ func BytesToBits(b float64) float64 {
 func BytesToGibiBytes(b uint64) uint64 {
 	return b >> 30
 }
+
+func KibiBytesToMebiBytes(b uint64) uint64 {
+	return b >> 10
+}
