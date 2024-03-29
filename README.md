@@ -11,6 +11,17 @@
    1. [Configuration](#homepage-conf)
 4. [How reliable are the measurements?](#caveat)
 
+
+> [!IMPORTANT]
+> Migrated from DockerHub to GitHub Container Registry.  
+> If you have installed before April 2024 please reinstall or manually change the `Registry URL` to
+> 
+> https://github.com/NebN/unraid-simple-monitoring-api/pkgs/container/unraid-simple-monitoring-api
+>  
+> ![image](https://github.com/NebN/unraid-simple-monitoring-api/assets/57036949/1e731fda-bc4e-42ab-b4f7-4617e1897d49)
+>
+> I will keep pushing to DockerHub for now, but would like to definitively migrate.
+
 ## What is this? <a id="what"></a> 
 Simple rest API to monitor basic metrics, currently supports:
 - Disk utilization
