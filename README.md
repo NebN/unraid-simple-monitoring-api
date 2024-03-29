@@ -16,6 +16,7 @@ Simple rest API to monitor basic metrics, currently supports:
 - Disk utilization
 - Network traffic
 - CPU load
+- Memory utilization
 
 Originally created for use with [Homepage](https://gethomepage.dev/latest/widgets/services/customapi/).
 
@@ -57,64 +58,103 @@ The response will be formatted this way.
    "array":[
       {
          "mount":"/mnt/disk1",
-         "total":906,
-         "used":515,
-         "free":391,
-         "free_percent":43.16,
-         "used_percent":56.84
+         "total":3724,
+         "used":1864,
+         "free":1860,
+         "used_percent":50.05,
+         "free_percent":49.95
+      },
+      {
+         "mount":"/mnt/disk2",
+         "total":3724,
+         "used":1366,
+         "free":2358,
+         "used_percent":36.68,
+         "free_percent":63.32
+      },
+      {
+         "mount":"/mnt/disk5",
+         "total":2793,
+         "used":20,
+         "free":2773,
+         "used_percent":0.72,
+         "free_percent":99.28
+      },
+      {
+         "mount":"/mnt/disk6",
+         "total":1862,
+         "used":85,
+         "free":1777,
+         "used_percent":4.56,
+         "free_percent":95.44
+      },
+      {
+         "mount":"/mnt/disk7",
+         "total":931,
+         "used":7,
+         "free":924,
+         "used_percent":0.75,
+         "free_percent":99.25
       }
    ],
    "cache":[
       {
-         "mount":"/",
-         "total":906,
-         "used":515,
-         "free":391,
-         "free_percent":43.16,
-         "used_percent":56.84
+         "mount":"/mnt/cache",
+         "total":465,
+         "used":210,
+         "free":255,
+         "used_percent":45.16,
+         "free_percent":54.84
       }
    ],
    "network":[
       {
-         "interface":"enp42s0",
-         "rx_MiBs":0.81,
-         "tx_MiBs":0.03,
-         "rx_Mbps":6.84,
-         "tx_Mbps":0.22
-      },
-      {
-         "interface":"eth0",
+         "interface":"docker0",
          "rx_MiBs":0,
          "tx_MiBs":0,
          "rx_Mbps":0,
          "tx_Mbps":0
+      },
+      {
+         "interface":"eth0",
+         "rx_MiBs":0.02,
+         "tx_MiBs":5.22,
+         "rx_Mbps":0.13,
+         "tx_Mbps":43.8
       }
    ],
    "array_total":{
       "mount":"total",
-      "total":906,
-      "used":515,
-      "free":391,
-      "free_percent":43.16,
-      "used_percent":56.84
+      "total":13034,
+      "used":3342,
+      "free":9692,
+      "used_percent":25.64,
+      "free_percent":74.36
    },
    "cache_total":{
       "mount":"total",
-      "total":906,
-      "used":515,
-      "free":391,
-      "free_percent":43.16,
-      "used_percent":56.84
+      "total":465,
+      "used":210,
+      "free":255,
+      "used_percent":45.16,
+      "free_percent":54.84
    },
    "network_total":{
       "interface":"total",
-      "rx_MiBs":0.81,
-      "tx_MiBs":0.03,
-      "rx_Mbps":6.84,
-      "tx_Mbps":0.22
+      "rx_MiBs":0.02,
+      "tx_MiBs":5.22,
+      "rx_Mbps":0.13,
+      "tx_Mbps":43.8
    },
-   "cpu": {
-      "load_percent":3.79
+   "cpu":{
+      "load_percent":10.6
+   },
+   "memory":{
+      "total":15788,
+      "used":1288,
+      "free":14500,
+      "used_percent":8.16,
+      "free_percent":91.84
    }
 }
 ```
