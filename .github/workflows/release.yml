@@ -2,7 +2,7 @@ name: Build and publish Docker image as GitHub package
 
 on:
   release:
-    types: [released, updated, edited]
+    types: [released]
 
 env:
   REGISTRY: ghcr.io
