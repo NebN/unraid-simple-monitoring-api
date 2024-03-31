@@ -12,12 +12,17 @@ Simple rest API to monitor basic metrics, currently supports:
 Originally created for [Unraid](https://unraid.net/) for use with [Homepage](https://gethomepage.dev/latest/widgets/services/customapi/).
 
 > [!IMPORTANT]
-> Migrated from DockerHub to GitHub Container Registry.  
-> If you have installed before April 2024 please reinstall or manually change the `Registry URL` to
+> Migrated from DockerHub to GitHub Container Registry.
 > 
-> https://github.com/NebN/unraid-simple-monitoring-api/pkgs/container/unraid-simple-monitoring-api
->  
-> ![image](https://github.com/NebN/unraid-simple-monitoring-api/assets/57036949/1e731fda-bc4e-42ab-b4f7-4617e1897d49)
+> If you have installed before April 2024 please reinstall or manually change  
+> `Repository` to  
+> `ghcr.io/nebn/unraid-simple-monitoring-api:latest`  
+> ![image](https://github.com/NebN/unraid-simple-monitoring-api/assets/57036949/3a2d8617-ee61-4eac-a76e-e1076408152b)
+> 
+> And optionally
+> `Registry URL` to  
+> `https://github.com/NebN/unraid-simple-monitoring-api/pkgs/container/unraid-simple-monitoring-api`  
+> ![image](https://github.com/NebN/unraid-simple-monitoring-api/assets/57036949/1e731fda-bc4e-42ab-b4f7-4617e1897d49)  
 >
 > I will keep pushing to DockerHub for now, but would like to definitively migrate.
 
@@ -224,6 +229,7 @@ This ensures that the response is quick and reasonably accurate, without having 
 
 ## Installing a QA build <a id="qa"></a>  
 Everyone's Unraid setup is different, therefore, when implementing a new feature or fixing a bug specific to a certain setup, it might be necessary that the end user (you) install a testing deployment to verify that everything works as expected.  
+
 To do so follow these steps:
 - Unraid Docker Tab
 - `unraid-simple-monitoring-api` > Stop
