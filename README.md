@@ -2,15 +2,14 @@
 ![GitHub commits since latest release](https://img.shields.io/github/commits-since/nebn/unraid-simple-monitoring-api/latest?style=for-the-badge)
 ![GitHub last commit](https://img.shields.io/github/last-commit/nebn/unraid-simple-monitoring-api?style=for-the-badge)
 
-# Table of Contents
-1. [What is this](#what)
-2. [Utilization with Unraid](#unraid)
-   1. [Installation](#unraid-install)
-   2. [Configuration](#unraid-conf)
-3. [Integration with Homepage](#homepage)
-   1. [Configuration](#homepage-conf)
-4. [How reliable are the measurements?](#caveat)
+# Unraid Simple Monitoring API
+Simple rest API to monitor basic metrics, currently supports:
+- Disk utilization
+- Network traffic
+- CPU load
+- Memory utilization
 
+Originally created for [Unraid](https://unraid.net/) for use with [Homepage](https://gethomepage.dev/latest/widgets/services/customapi/).
 
 > [!IMPORTANT]
 > Migrated from DockerHub to GitHub Container Registry.  
@@ -22,14 +21,14 @@
 >
 > I will keep pushing to DockerHub for now, but would like to definitively migrate.
 
-## What is this? <a id="what"></a> 
-Simple rest API to monitor basic metrics, currently supports:
-- Disk utilization
-- Network traffic
-- CPU load
-- Memory utilization
-
-Originally created for use with [Homepage](https://gethomepage.dev/latest/widgets/services/customapi/).
+## Table of Contents
+1. [Utilization with Unraid](#unraid)
+   1. [Installation](#unraid-install)
+   2. [Configuration](#unraid-conf)
+2. [Integration with Homepage](#homepage)
+   1. [Configuration](#homepage-conf)
+3. [How reliable are the measurements?](#caveat)
+4. [Installing a QA build](#qa)
 
 ## Utilization with Unraid <a id="unraid"></a> 
 ### Installation <a id="unraid-install"></a>
@@ -222,3 +221,20 @@ To avoid having to either:
 
 A different approach has been taken: a snapshot of Network and CPU usage is taken every time the API is called, and the response is the average Network and CPU usage between the current and last API call.
 This ensures that the response is quick and reasonably accurate, without having the process continuously read Network and CPU data even when not required.
+
+## Installing a QA build <a id="qa"></a>  
+Everyone's Unraid setup is different, therefore, when implementing a new feature or fixing a bug specific to a certain setup, it might be necessary that the end user (you) install a testing deployment to verify that everything works as expected.  
+To do so follow these steps:
+- Unraid Docker Tab
+- `unraid-simple-monitoring-api` > Stop
+- Add container
+- Template > `unraid-simple-monitoring-api`
+- Change the name to something else, e.g.: `unraid-simple-monitoring-api-QA`
+- Change `Repository:` to `ghcr.io/nebn/unraid-simple-monitoring-api:qa` (The actual tag might change, currently using `qa`)
+- Apply
+
+You should now have 2 installations on your Docker Tab, and can switch between them by stopping/starting them. 
+
+> [!NOTE]  
+> Avoid having both active at the same time, as they share the same port and would therefore be unable to start the HTTP service.
+ 
