@@ -1,7 +1,5 @@
 #!/bin/sh
 
-echo "Checking if 'zfs list' can be used before running container..."
-
 # zfs list will not work if the container is being run as unprivileged 
 if zfs list > /dev/null 2>&1; then
   export ZFS_OK="true"
