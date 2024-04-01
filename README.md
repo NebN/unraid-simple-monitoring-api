@@ -26,10 +26,13 @@ Originally created for [Unraid](https://unraid.net/) for use with [Homepage](htt
 >
 > I will keep pushing to DockerHub for now, but would like to definitively migrate.
 
+
 ## Table of Contents
 1. [Utilization with Unraid](#unraid)
    1. [Installation](#unraid-install)
    2. [Configuration](#unraid-conf)
+   3. [ZFS](#unraid-zfs)
+   4. [Calling the API](#unraid-use)
 2. [Integration with Homepage](#homepage)
    1. [Configuration](#homepage-conf)
 3. [How reliable are the measurements?](#caveat)
@@ -60,7 +63,20 @@ disks:
     - /mnt/disk2
 ```
 
-### Utilization <a id="unraid-use"></a>
+### ZFS <a id="unraid-zfs"></a>
+If any of the mount points listed in the configuration are using ZFS, the application  needs to be run as privileged in order to obtain the correct utilization of ZFS datasets. Essentially the command `zfs list` is being used to obtain the correct information, as conventional disk reading methods do not  seem work.
+
+If you are comfortable with running the container as privileged, follow these steps:
+- Unraid Docker Tab
+- `unraid-simple-monitoring-api` > Edit
+- Change `Privileged:` to `ON`
+- Apply
+
+You can always decide to turn `Privileged:` back to `OFF`.
+> [!TIP]
+> If you are not using ZFS, there is no reason to run the container as privileged.
+
+### Calling the API <a id="unraid-use"></a>
 Make a request to 
 ```
 http://your-unraid-ip:24940

@@ -81,6 +81,58 @@ func TestRoundTwoDecimals(t *testing.T) {
 	}
 }
 
+func TestParseZfsSize(t *testing.T) {
+	str := "12.5G"
+	var expected uint64 = 13421772800
+	res, err := ParseZfsSize(str)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	if res != expected {
+		t.Fatalf("expected: %d, got: %d", expected, res)
+	}
+
+	str = "230.5T"
+	expected = 253437430202368
+	res, err = ParseZfsSize(str)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	if res != expected {
+		t.Fatalf("expected: %d, got: %d", expected, res)
+	}
+
+	str = "130.50M"
+	expected = 136839168
+	res, err = ParseZfsSize(str)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	if res != expected {
+		t.Fatalf("expected: %d, got: %d", expected, res)
+	}
+
+	str = "93K"
+	expected = 95232
+	res, err = ParseZfsSize(str)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	if res != expected {
+		t.Fatalf("expected: %d, got: %d", expected, res)
+	}
+
+	str = "100B"
+	expected = 100
+	res, err = ParseZfsSize(str)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	if res != expected {
+		t.Fatalf("expected: %d, got: %d", expected, res)
+	}
+}
+
 func floatAreEqualEnough(a float64, b float64) bool {
 	return math.Abs(a-b) < 1e-9
 }
