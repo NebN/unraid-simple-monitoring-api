@@ -1,6 +1,6 @@
 FROM golang:alpine
 
-RUN apk update && apk upgrade
+RUN apk update && apk upgrade && apk add --no-cache zfs
 
 WORKDIR /app
 
@@ -11,6 +11,10 @@ COPY cmd ./cmd
 COPY internal ./internal 
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /unraid-simple-monitoring-api ./cmd
+
+COPY deploy/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT [ "/entrypoint.sh" ]
 
 ARG HOSTFS_PREFIX
 
