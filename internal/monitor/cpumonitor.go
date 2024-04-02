@@ -42,7 +42,12 @@ func (m *CpuMonitor) ComputeCpuStatus() (status CpuStatus) {
 	deltaIdle := snapshot.idle - oldSnapshot.idle
 	deltaTotal := snapshot.total - oldSnapshot.total
 
-	loadPercent := (1 - (float64(deltaIdle) / float64(deltaTotal))) * 100
+	loadPercent := 0.0
+	if deltaTotal > 0 {
+		loadPercent = (1 - (float64(deltaIdle) / float64(deltaTotal))) * 100
+	} else {
+		slog.Warn("Delta between cpu snapshots' total values is 0, cpu load percent will be returned as 0")
+	}
 
 	status.LoadPercent = util.RoundTwoDecimals(loadPercent)
 	m.snapshot = snapshot

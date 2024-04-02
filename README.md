@@ -186,7 +186,8 @@ The response will be formatted this way.
       "free":14500,
       "used_percent":8.16,
       "free_percent":91.84
-   }
+   },
+   "error":null
 }
 ```
 

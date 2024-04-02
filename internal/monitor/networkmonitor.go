@@ -87,11 +87,16 @@ func networkRate(
 
 	ratePerSecond := func(t0Reading uint64, t1Reading uint64, t0 time.Time, t1 time.Time) (float64, float64) {
 		readingDiff := (t1Reading - t0Reading)
-		rate := float64(readingDiff) / t1.Sub(t0).Seconds()
-		rateMebiBytes := util.BytesToMebiBytes(rate)
-		rateMegaBits := util.BytesToBits(util.BytesToMegaBytes(rate))
-
-		return rateMebiBytes, rateMegaBits
+		deltaTime := t1.Sub(t0).Seconds()
+		if deltaTime > 0 {
+			rate := float64(readingDiff) / deltaTime
+			rateMebiBytes := util.BytesToMebiBytes(rate)
+			rateMegaBits := util.BytesToBits(util.BytesToMegaBytes(rate))
+			return rateMebiBytes, rateMegaBits
+		} else {
+			slog.Warn("Delta time between network snapshots is 0, rate will be returned as 0", slog.String("interface", previousSnapshot.Iname))
+		}
+		return 0, 0
 	}
 
 	rxMiBs, rxMbps := ratePerSecond(previousSnapshot.Rx, snapshot.Rx, previousSnapshot.RxTs, snapshot.RxTs)
