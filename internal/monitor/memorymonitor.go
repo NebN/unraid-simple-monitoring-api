@@ -81,8 +81,12 @@ func (monitor *MemoryMonitor) ComputeMemoryUsage() (status MemoryStatus) {
 	}
 
 	status.Used = status.Total - status.Free
-	status.FreePercent = util.RoundTwoDecimals((float64(status.Free) / float64(status.Total)) * 100)
-	status.UsedPercent = util.RoundTwoDecimals(100 - status.FreePercent)
+	if status.Total > 0 {
+		status.FreePercent = util.RoundTwoDecimals((float64(status.Free) / float64(status.Total)) * 100)
+		status.UsedPercent = util.RoundTwoDecimals(100 - status.FreePercent)
+	} else {
+		slog.Warn("Memory total is 0, free/used percent will be returned as 0")
+	}
 
 	return
 }

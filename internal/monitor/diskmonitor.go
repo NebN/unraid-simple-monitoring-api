@@ -119,8 +119,16 @@ func diskUsage(index int, path string, wg *sync.WaitGroup, diskChan chan util.In
 		total := util.BytesToGibiBytes(usage.Total)
 		free := util.BytesToGibiBytes(usage.Free)
 		used := total - free
-		freePercent := util.RoundTwoDecimals((float64(free) / float64(total)) * 100)
-		usedPercent := util.RoundTwoDecimals(100 - freePercent)
+
+		freePercent := 0.0
+		usedPercent := 0.0
+
+		if total > 0 {
+			freePercent = util.RoundTwoDecimals((float64(free) / float64(total)) * 100)
+			usedPercent = util.RoundTwoDecimals(100 - freePercent)
+		} else {
+			slog.Warn("Total disk size is 0, free/used percent will be returned as 0", slog.String("disk", path))
+		}
 
 		status := DiskStatus{
 			Path:        path,
@@ -141,8 +149,16 @@ func zfsDatasetUsage(dataset ZfsDataset) DiskStatus {
 	freeBytes, _ := util.ParseZfsSize(dataset.Avail)
 	free := util.BytesToGibiBytes(freeBytes)
 	total := used + free
-	freePercent := util.RoundTwoDecimals((float64(free) / float64(total)) * 100)
-	usedPercent := util.RoundTwoDecimals(100 - freePercent)
+
+	freePercent := 0.0
+	usedPercent := 0.0
+
+	if total > 0 {
+		freePercent = util.RoundTwoDecimals((float64(free) / float64(total)) * 100)
+		usedPercent = util.RoundTwoDecimals(100 - freePercent)
+	} else {
+		slog.Warn("ZFS dataset total size is 0, free/used percent will be returned as 0", slog.String("dataset", dataset.Mountpoint))
+	}
 
 	status := DiskStatus{
 		Path:        dataset.Mountpoint,
@@ -202,9 +218,11 @@ func AggregateDiskStatuses(disks []DiskStatus) (status DiskStatus) {
 		status.Used = status.Used + disk.Used
 	}
 	status.Free = status.Total - status.Used
-	if status.Total != 0 {
+	if status.Total > 0 {
 		status.FreePercent = util.RoundTwoDecimals(float64(status.Free) / float64(status.Total) * 100)
 		status.UsedPercent = util.RoundTwoDecimals(100 - status.FreePercent)
+	} else {
+		slog.Warn("Disk aggregation total space is 0, free/used percent will be returned as 0")
 	}
 	status.Path = "total"
 	return

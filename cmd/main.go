@@ -90,12 +90,16 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		NetworkTotal: networkTotal,
 		Cpu:          cpu,
 		Memory:       memory,
+		Error:        nil,
 	}
 
 	responseJson, err := json.Marshal(response)
 	if err != nil {
-		slog.Error("Error trying to respond to API call", slog.String("error", err.Error()))
-		w.Write([]byte(err.Error()))
+		slog.Error("Error trying to respond to API call",
+			slog.String("error", err.Error()),
+			slog.String("attempting to marshal", fmt.Sprintf("%+v\n", response)))
+		errorResponse, _ := json.Marshal(newErrorReport(err.Error()))
+		w.Write([]byte(errorResponse))
 	} else {
 		w.Write([]byte(responseJson))
 	}
@@ -110,4 +114,16 @@ type Report struct {
 	NetworkTotal monitor.NetworkRate   `json:"network_total"`
 	Cpu          monitor.CpuStatus     `json:"cpu"`
 	Memory       monitor.MemoryStatus  `json:"memory"`
+	Error        *string               `json:"error"`
+}
+
+func newErrorReport(err string) (report Report) {
+
+	report.Array = make([]monitor.DiskStatus, 0)
+	report.Cache = make([]monitor.DiskStatus, 0)
+	report.Network = make([]monitor.NetworkRate, 0)
+
+	report.Error = &err
+
+	return
 }
