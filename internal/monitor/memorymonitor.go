@@ -31,7 +31,7 @@ func (monitor *MemoryMonitor) ComputeMemoryUsage() (status MemoryStatus) {
 
 	meminfo, err := os.Open("/proc/meminfo")
 	if err != nil {
-		slog.Error("Cannot read memory data", slog.String("error", err.Error()))
+		slog.Error("Memory cannot read data", slog.String("error", err.Error()))
 		return
 	}
 	defer meminfo.Close()
@@ -41,7 +41,7 @@ func (monitor *MemoryMonitor) ComputeMemoryUsage() (status MemoryStatus) {
 		if len(res) > 1 {
 			parsed, err := strconv.ParseUint(res[1], 10, 64)
 			if err != nil {
-				slog.Error("Cannot parse memory value from /proc/meminfo",
+				slog.Error("Memory cannot parse value from /proc/meminfo",
 					slog.String("parsing", res[1]),
 					slog.String("error", err.Error()))
 				return 0, false
@@ -56,10 +56,12 @@ func (monitor *MemoryMonitor) ComputeMemoryUsage() (status MemoryStatus) {
 	for scanner.Scan() {
 		line := scanner.Text()
 
+		slog.Debug("Memory", "line", line)
 		if status.Total == 0 {
 			memTotal, found := findGroup(memTotalRegex, line)
 			if found {
 				status.Total = util.KibiBytesToMebiBytes(memTotal)
+				slog.Debug("Memory total parsed", "total_MiB", status.Total)
 			}
 		}
 
@@ -67,6 +69,7 @@ func (monitor *MemoryMonitor) ComputeMemoryUsage() (status MemoryStatus) {
 			memAvailable, found := findGroup(memAvailableRegex, line)
 			if found {
 				status.Free = util.KibiBytesToMebiBytes(memAvailable)
+				slog.Debug("Memory free parsed", "free_MiB", status.Free)
 			}
 		}
 
@@ -76,7 +79,7 @@ func (monitor *MemoryMonitor) ComputeMemoryUsage() (status MemoryStatus) {
 	}
 
 	if status.Total == 0 {
-		slog.Error("Unable to compute memory usage")
+		slog.Error("Memory unable to compute usage")
 		return
 	}
 

@@ -92,9 +92,15 @@ func networkRate(
 			rate := float64(readingDiff) / deltaTime
 			rateMebiBytes := util.BytesToMebiBytes(rate)
 			rateMegaBits := util.BytesToBits(util.BytesToMegaBytes(rate))
+			slog.Debug("Network computing rate per second",
+				"interface", snapshot.Iname,
+				"t0_value", t0Reading,
+				"t0", t0,
+				"t1_value", t1Reading,
+				"t1", t1)
 			return rateMebiBytes, rateMegaBits
 		} else {
-			slog.Warn("Delta time between network snapshots is 0, rate will be returned as 0", slog.String("interface", previousSnapshot.Iname))
+			slog.Warn("Network delta time between snapshots is 0, rate will be returned as 0", slog.String("interface", previousSnapshot.Iname))
 		}
 		return 0, 0
 	}
@@ -110,6 +116,7 @@ func networkRate(
 		Iname:  previousSnapshot.Iname,
 	}
 
+	slog.Debug("Network", "rate", rate)
 	snapshotChan <- util.IndexedValue[NetworkSnapshot]{Index: index, Value: snapshot}
 	rateChan <- util.IndexedValue[NetworkRate]{Index: index, Value: rate}
 }
@@ -125,7 +132,7 @@ func newNetworkSnapshot(iname string) (network NetworkSnapshot) {
 		now := time.Now()
 		res, err := os.ReadFile(fmt.Sprintf("/sys/class/net/%s/statistics/%s_bytes", iname, direction))
 		if err != nil {
-			slog.Error("Cannot read network data", "interface", iname, slog.String("error", err.Error()))
+			slog.Error("Network cannot read data", "interface", iname, slog.String("error", err.Error()))
 			return
 		}
 
@@ -133,7 +140,7 @@ func newNetworkSnapshot(iname string) (network NetworkSnapshot) {
 
 		uint64Bytes, err := strconv.ParseUint(stringBytes, 10, 64)
 		if err != nil {
-			slog.Error("Cannot parse network data from /sys/class/net/",
+			slog.Error("Network cannot parse data from /sys/class/net/",
 				slog.String("trying to parse", stringBytes),
 				slog.String("error", err.Error()))
 		}
@@ -174,6 +181,8 @@ func newNetworkSnapshot(iname string) (network NetworkSnapshot) {
 	network.Tx = tx
 	network.RxTs = rxTs
 	network.TxTs = txTs
+
+	slog.Debug("Network", "snapshot", network)
 	return
 }
 
@@ -183,6 +192,7 @@ func AggregateNetworkRates(networks []NetworkRate) (status NetworkRate) {
 		status.TxMbps = status.TxMbps + network.TxMbps
 		status.RxMiBs = status.RxMiBs + network.RxMiBs
 		status.TxMiBs = status.TxMiBs + network.TxMiBs
+		slog.Debug("Network aggregation", "network", network, "running_total", status)
 	}
 	status.Iname = "total"
 	return

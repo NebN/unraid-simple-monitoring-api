@@ -14,6 +14,7 @@ import (
 const PORT = "24940"
 
 func main() {
+	slog.SetLogLoggerLevel(slog.LevelDebug)
 	mux := http.NewServeMux()
 	confPath := os.Getenv("CONF_PATH")
 	conf, err := readConf(confPath)
@@ -21,6 +22,10 @@ func main() {
 		slog.Error("Cannot read conf.yml", slog.String("error", err.Error()))
 		return
 	} else {
+		var loggingLevel slog.Level
+		loggingLevel.UnmarshalText([]byte(conf.LoggingLevel))
+		slog.SetLogLoggerLevel(loggingLevel)
+		slog.Info("Logging", slog.String("level", loggingLevel.Level().String()))
 		slog.Debug("Configuration", "conf", conf)
 	}
 
@@ -40,6 +45,7 @@ type Conf struct {
 		Cache []string `yaml:"cache"`
 		Array []string `yaml:"array"`
 	} `yaml:"disks"`
+	LoggingLevel string `yaml:"loggingLevel"`
 }
 
 func readConf(path string) (Conf, error) {
@@ -73,6 +79,8 @@ func NewHandler(conf Conf) (handler handler) {
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
+	slog.Debug("Request received", slog.String("request", fmt.Sprintf("%+v\n", r)))
+
 	cache, array := h.DiskMonitor.ComputeDiskUsage()
 	network := h.NetworkMonitor.ComputeNetworkRate()
 	cacheTotal := monitor.AggregateDiskStatuses(cache)
@@ -101,6 +109,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		errorResponse, _ := json.Marshal(newErrorReport(err.Error()))
 		w.Write([]byte(errorResponse))
 	} else {
+		slog.Debug("Responding to request", "response", responseJson)
 		w.Write([]byte(responseJson))
 	}
 }
