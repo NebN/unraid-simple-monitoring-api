@@ -46,7 +46,7 @@ func NewDiskMonitor(cache []string, array []string) (dm DiskMonitor) {
 	checkZfsBool, err := strconv.ParseBool(checkZfsString)
 
 	if err != nil {
-		slog.Error("Unable to parse env variable as bool",
+		slog.Error("Disk unable to parse env variable as bool",
 			slog.String("variable name", "ZFS_OK"),
 			slog.String("variable value", checkZfsString))
 	}
@@ -107,13 +107,14 @@ func diskUsage(index int, path string, wg *sync.WaitGroup, diskChan chan util.In
 
 	var hostFsPrefix, isSet = os.LookupEnv("HOSTFS_PREFIX")
 	if isSet {
-		slog.Debug("Host prefix is set to", "value", hostFsPrefix)
+		slog.Debug("Disk host prefix is set", "value", hostFsPrefix)
 		pathToQuery = filepath.Join(hostFsPrefix, path)
 	}
+	slog.Debug("Disk reading usage", "path", pathToQuery, "original_path", path)
 	usage, err := disk.Usage(pathToQuery)
 
 	if err != nil {
-		slog.Error("Cannot read disk", slog.String("path", path), slog.String("error", err.Error()))
+		slog.Error("Disk cannot read", slog.String("path", path), slog.String("error", err.Error()))
 		diskChan <- util.IndexedValue[DiskStatus]{Index: index, Value: DiskStatus{Path: path}}
 	} else {
 		total := util.BytesToGibiBytes(usage.Total)
@@ -127,7 +128,7 @@ func diskUsage(index int, path string, wg *sync.WaitGroup, diskChan chan util.In
 			freePercent = util.RoundTwoDecimals((float64(free) / float64(total)) * 100)
 			usedPercent = util.RoundTwoDecimals(100 - freePercent)
 		} else {
-			slog.Warn("Total disk size is 0, free/used percent will be returned as 0", slog.String("disk", path))
+			slog.Warn("Disk total size is 0, free/used percent will be returned as 0", slog.String("disk", path))
 		}
 
 		status := DiskStatus{
@@ -138,6 +139,8 @@ func diskUsage(index int, path string, wg *sync.WaitGroup, diskChan chan util.In
 			FreePercent: freePercent,
 			UsedPercent: usedPercent,
 		}
+
+		slog.Debug("Disk status computed", "index", index, "status", status)
 
 		diskChan <- util.IndexedValue[DiskStatus]{Index: index, Value: status}
 	}
@@ -157,7 +160,7 @@ func zfsDatasetUsage(dataset ZfsDataset) DiskStatus {
 		freePercent = util.RoundTwoDecimals((float64(free) / float64(total)) * 100)
 		usedPercent = util.RoundTwoDecimals(100 - freePercent)
 	} else {
-		slog.Warn("ZFS dataset total size is 0, free/used percent will be returned as 0", slog.String("dataset", dataset.Mountpoint))
+		slog.Warn("Disk ZFS dataset total size is 0, free/used percent will be returned as 0", slog.String("dataset", dataset.Mountpoint))
 	}
 
 	status := DiskStatus{
@@ -169,6 +172,8 @@ func zfsDatasetUsage(dataset ZfsDataset) DiskStatus {
 		UsedPercent: usedPercent,
 	}
 
+	slog.Debug("Disk ZFS dataset status computed", "status", status)
+
 	return status
 }
 
@@ -177,18 +182,21 @@ func (monitor *DiskMonitor) readZfsDatasets() map[string]ZfsDataset {
 	zfsDatasets := make(map[string]ZfsDataset)
 
 	if !monitor.checkZfs {
+		slog.Debug("Disk ZFS dataset checking is disabled")
 		return zfsDatasets
+	} else {
+		slog.Debug("Disk ZFS dataset checking is enabled")
 	}
 
 	cmd := exec.Command("zfs", "list")
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		slog.Error("Error while preparing command 'zfs list'", slog.String("error", err.Error()))
+		slog.Error("Disk error while preparing command 'zfs list'", slog.String("error", err.Error()))
 		return zfsDatasets
 	}
 
 	if err := cmd.Start(); err != nil {
-		slog.Error("Error running command 'zfs list'", slog.String("error", err.Error()))
+		slog.Error("Disk error running command 'zfs list'", slog.String("error", err.Error()))
 		return zfsDatasets
 	}
 
@@ -204,7 +212,7 @@ func (monitor *DiskMonitor) readZfsDatasets() map[string]ZfsDataset {
 			Refer:      fields[3],
 			Mountpoint: fields[4],
 		}
-		slog.Debug("ZFS dataset found", "dataset", ds)
+		slog.Debug("Disk ZFS dataset found", "dataset", ds)
 		zfsDatasets[ds.Mountpoint] = ds
 	}
 	cmd.Wait()
@@ -216,6 +224,7 @@ func AggregateDiskStatuses(disks []DiskStatus) (status DiskStatus) {
 	for _, disk := range disks {
 		status.Total = status.Total + disk.Total
 		status.Used = status.Used + disk.Used
+		slog.Debug("Disk aggregating usage", "current_disk", disk, "running_total", status)
 	}
 	status.Free = status.Total - status.Used
 	if status.Total > 0 {

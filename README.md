@@ -63,6 +63,12 @@ disks:
     - /mnt/disk2
 ```
 
+Optionally you can specify the desired level of logging by adding the following line
+```yaml
+loggingLevel: DEBUG
+```
+Accepted values are `DEBUG` `INFO` `WARN` and `ERROR`, it defaults to `INFO`. 
+
 ### ZFS <a id="unraid-zfs"></a>
 If any of the mount points listed in the configuration are using ZFS, the application  needs to be run as privileged in order to obtain the correct utilization of ZFS datasets. Essentially the command `zfs list` is being used to obtain the correct information, as conventional disk reading methods do not  seem work.
 
