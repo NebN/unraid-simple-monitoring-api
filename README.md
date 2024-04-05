@@ -200,10 +200,10 @@ The response will be formatted this way.
 ## Integration with Homepage <a id="homepage"></a> 
 ![image](https://github.com/NebN/unraid-simple-monitoring-api/assets/57036949/0175ffbd-fe84-494c-a29f-264f09aae6f3)
 ### Configuration <a id="homepage-conf"></a>
-Official homepage custom API widget documentation: https://gethomepage.dev/latest/widgets/services/customapi/.  
-Your homepage `services.yml` should look like this if you want for example cache and network data. Homepage limits the widget to 4 items.
+Check out [Hompage's official custom API widget documentation](https://gethomepage.dev/latest/widgets/services/customapi/).  
+Your homepage `services.yaml` should look like this if you want it to look like the above example, showing cache and network data. 
 
-```yml
+```yaml
 - Category:
    - Unraid:
         icon: unraid.png
@@ -217,7 +217,7 @@ Your homepage `services.yml` should look like this if you want for example cache
                 cache_total: free
               label: cache free
               format: number
-              suffix: "GiB"
+              suffix: GiB
             - field:
                 cache_total: free_percent
               label: percent
@@ -233,6 +233,75 @@ Your homepage `services.yml` should look like this if you want for example cache
               format: float
               suffix: MiB/s
 ```
+
+The following are examples for each currently available field.
+- #### Array Total
+```yaml
+- field:
+    array_total: free # or used, total, used_percent, free_percent
+  label: your label
+  format: number # or percentage
+  suffix: GiB # or nothing in case of percentages, or whatver you prefer
+```
+
+- #### Cache Total
+```yaml
+- field:
+    cache_total: free # or used, total, used_percent, free_percent
+  label: your label
+  format: number # or percentage
+  suffix: GiB # or nothing in case of percentages, or whatver you prefer
+```
+
+- #### Specific Disk
+```yaml
+- field:
+    array: # or cache
+      0: free 
+      # '0' is the index of the disk, 0 = the first 
+      # 'free' is the field you wish to read
+  label: your label
+  format: number
+  suffix: GiB
+```
+
+- #### Network Total
+```yaml
+- field:
+    network_total: rx_MiBs # or tx_MiBs, rx_Mbps, tx_Mbps
+  label: your label
+  format: float # or 'number' to round to the nearest integer
+  suffix: MiB/s # or Mbps, or whatever you prefer
+```
+
+- #### Specific Network
+```yaml
+- field:
+    network:
+      0: rx_MiBs 
+      # '0' is the index of the network, 0 = the first 
+      # 'rx_MiBs' is the field you wish to read
+  label: your label
+  format: float
+  suffix: MiB/s 
+```
+
+- #### CPU
+```yaml
+- field:
+    cpu: load_percent
+  label: your label
+  format: percent
+```
+
+- #### Memory
+```yaml
+- field:
+    memory: used_percent # or free_percent, total, used, free
+  label: your label
+  format: percent
+```
+
 
 ## How reliable are the measurements? <a id="caveat"></a>
 The goal of this API is to be simple, fast, and lightweight.  
