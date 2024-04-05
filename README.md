@@ -301,6 +301,17 @@ The following are examples for each currently available field.
   label: your label
   format: percent
 ```
+> [!TIP]
+> If you wish to show more than the usual 4 allowed fields, you can set the widget property `display: list` to have the fields displayed in a vertical list that can be arbitrarily long.
+> ```yaml
+> widget:
+>   type: customapi
+>   display: list
+>   mappings:
+>      ...
+> ```
+> ![image](https://github.com/NebN/unraid-simple-monitoring-api/assets/57036949/ed4b694c-ac76-4516-a722-573510e0271c)
+
 
 
 ## How reliable are the measurements? <a id="caveat"></a>
