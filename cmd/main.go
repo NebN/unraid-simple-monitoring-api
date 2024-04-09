@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"reflect"
+	"strings"
 
 	"github.com/NebN/unraid-simple-monitoring-api/internal/monitor"
 	"gopkg.in/yaml.v3"
@@ -19,7 +21,24 @@ func main() {
 	confPath := os.Getenv("CONF_PATH")
 	conf, err := readConf(confPath)
 	if err != nil {
-		slog.Error("Cannot read conf.yml", slog.String("error", err.Error()))
+		switch err := err.(type) {
+		case *os.PathError:
+			defaultInfo := "Default location is /mnt/user/appdata/unraid-simple-monitoring-api/conf.yml. " +
+				"More info @ https://github.com/NebN/unraid-simple-monitoring-api"
+
+			if strings.Contains(err.Error(), "is a directory") {
+				slog.Error("Configuration file has been created as a directory. " +
+					"Please delete it and create a configuration file in its place. " + defaultInfo)
+			} else {
+				slog.Error("Configuration file not found. Please create it. " + defaultInfo)
+			}
+
+		case *yaml.TypeError:
+			slog.Error("Configuration file is malformed", "error", err.Error())
+
+		default:
+			slog.Error("Unable to read configuration file", "error", err.Error(), "type", reflect.TypeOf(err))
+		}
 		return
 	} else {
 		var loggingLevel slog.Level
