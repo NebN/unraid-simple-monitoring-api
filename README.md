@@ -4,9 +4,9 @@
 
 # Unraid Simple Monitoring API
 Simple rest API to monitor basic metrics, currently supports:
-- Disk utilization
+- Disk utilization and temperature
 - Network traffic
-- CPU load
+- CPU load and temperature
 - Memory utilization
 
 Originally created for [Unraid](https://unraid.net/) for use with [Homepage](https://gethomepage.dev/latest/widgets/services/customapi/).
@@ -70,7 +70,7 @@ loggingLevel: DEBUG
 Accepted values are `DEBUG` `INFO` `WARN` and `ERROR`, it defaults to `INFO`. 
 
 ### ZFS <a id="unraid-zfs"></a>
-If any of the mount points listed in the configuration are using ZFS, the application  needs to be run as privileged in order to obtain the correct utilization of ZFS datasets. Essentially the command `zfs list` is being used to obtain the correct information, as conventional disk reading methods do not  seem work.
+If any of the mount points listed in the configuration are using ZFS, the application needs to be run as privileged in order to obtain the correct utilization of ZFS datasets. The command `zfs list` is being used to obtain the correct information, as conventional disk reading methods do not seem to work.
 
 If you are comfortable with running the container as privileged, follow these steps:
 - Unraid Docker Tab
@@ -99,7 +99,8 @@ The response will be formatted this way.
          "used":1864,
          "free":1860,
          "used_percent":50.05,
-         "free_percent":49.95
+         "free_percent":49.95,
+         "temp":32
       },
       {
          "mount":"/mnt/disk2",
@@ -107,31 +108,17 @@ The response will be formatted this way.
          "used":1366,
          "free":2358,
          "used_percent":36.68,
-         "free_percent":63.32
+         "free_percent":63.32,
+         "temp":34
       },
       {
-         "mount":"/mnt/disk5",
-         "total":2793,
-         "used":20,
-         "free":2773,
-         "used_percent":0.72,
-         "free_percent":99.28
-      },
-      {
-         "mount":"/mnt/disk6",
-         "total":1862,
-         "used":85,
-         "free":1777,
-         "used_percent":4.56,
-         "free_percent":95.44
-      },
-      {
-         "mount":"/mnt/disk7",
+         "mount":"/mnt/disk3",
          "total":931,
          "used":7,
          "free":924,
          "used_percent":0.75,
-         "free_percent":99.25
+         "free_percent":99.25,
+         "temp":0
       }
    ],
    "cache":[
@@ -141,7 +128,8 @@ The response will be formatted this way.
          "used":210,
          "free":255,
          "used_percent":45.16,
-         "free_percent":54.84
+         "free_percent":54.84,
+         "temp":37
       }
    ],
    "network":[
@@ -184,7 +172,8 @@ The response will be formatted this way.
       "tx_Mbps":43.8
    },
    "cpu":{
-      "load_percent":10.6
+      "load_percent":10.6,
+      "temp":41
    },
    "memory":{
       "total":15788,
@@ -260,6 +249,7 @@ The following are examples for each currently available field.
       0: free 
       # '0' is the index of the disk, 0 = the first 
       # 'free' is the field you wish to read
+      # specific disks (or cache disks using btrfs) also have the 'temp' field
   label: your label
   format: number
   suffix: GiB
@@ -289,9 +279,9 @@ The following are examples for each currently available field.
 - #### CPU
 ```yaml
 - field:
-    cpu: load_percent
+    cpu: load_percent # or temp
   label: your label
-  format: percent
+  format: percent # or number
 ```
 
 - #### Memory

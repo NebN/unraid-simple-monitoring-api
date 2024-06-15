@@ -13,15 +13,18 @@ import (
 
 	"github.com/NebN/unraid-simple-monitoring-api/internal/util"
 	"github.com/shirou/gopsutil/disk"
+	"gopkg.in/ini.v1"
 )
 
 type DiskStatus struct {
+	Name        string
 	Path        string  `json:"mount"`
 	Total       uint64  `json:"total"`
 	Used        uint64  `json:"used"`
 	Free        uint64  `json:"free"`
 	UsedPercent float64 `json:"used_percent"`
 	FreePercent float64 `json:"free_percent"`
+	Temp        uint64  `json:"temp"`
 }
 
 type DiskMonitor struct {
@@ -62,6 +65,7 @@ func NewDiskMonitor(cache []string, array []string) (dm DiskMonitor) {
 }
 
 func (monitor *DiskMonitor) ComputeDiskUsage() ([]DiskStatus, []DiskStatus) {
+	temps := readDiskTemps()
 
 	var wg sync.WaitGroup
 
@@ -88,6 +92,13 @@ func (monitor *DiskMonitor) ComputeDiskUsage() ([]DiskStatus, []DiskStatus) {
 
 		disks := make([]DiskStatus, len(paths))
 		for disk := range diskChan {
+			temp, isSet := temps[disk.Value.Name]
+			if isSet {
+				disk.Value.Temp = temp
+			} else {
+				slog.Warn("Disk temperature not set", "name", disk.Value.Name)
+			}
+
 			disks[disk.Index] = disk.Value
 		}
 
@@ -132,6 +143,7 @@ func diskUsage(index int, path string, wg *sync.WaitGroup, diskChan chan util.In
 		}
 
 		status := DiskStatus{
+			Name:        filepath.Base(path),
 			Path:        path,
 			Total:       total,
 			Free:        free,
@@ -164,6 +176,7 @@ func zfsDatasetUsage(dataset ZfsDataset) DiskStatus {
 	}
 
 	status := DiskStatus{
+		Name:        filepath.Base(dataset.Mountpoint),
 		Path:        dataset.Mountpoint,
 		Total:       total,
 		Free:        free,
@@ -218,6 +231,52 @@ func (monitor *DiskMonitor) readZfsDatasets() map[string]ZfsDataset {
 	cmd.Wait()
 
 	return zfsDatasets
+}
+
+func readDiskTemps() map[string]uint64 {
+	pathToQuery := "/var/local/emhttp/disks.ini"
+
+	var hostFsPrefix, isSet = os.LookupEnv("HOSTFS_PREFIX")
+	if isSet {
+		slog.Debug("Disk host prefix is set", "value", hostFsPrefix)
+		pathToQuery = filepath.Join(hostFsPrefix, pathToQuery)
+	}
+
+	tempMap := make(map[string]uint64)
+
+	temps, err := ini.Load(pathToQuery)
+	if err != nil {
+		slog.Error("Disk unable to read disks.ini", "error", slog.String("error", err.Error()))
+	}
+
+	for _, section := range temps.Sections() {
+		if section.Name() == "DEFAULT" {
+			continue
+		}
+
+		sectionName := strings.Trim(section.Name(), "\"")
+
+		slog.Debug("Disk reading section", "section", sectionName)
+		var temp uint64
+		tempString, err := section.GetKey("temp")
+		if err != nil {
+			slog.Error("Disk unable to read disks.ini section", "section", sectionName, "error", slog.String("error", err.Error()))
+			continue
+		}
+
+		if tempString.String() != "*" {
+			temp, err = strconv.ParseUint(tempString.String(), 10, 16)
+			if err != nil {
+				slog.Error("Disk unable to parse disk temp", "string", tempString.String(), "error", slog.String("error", err.Error()))
+			}
+		} else {
+			slog.Debug("Disk temp unavailable", "disk", sectionName)
+		}
+
+		tempMap[sectionName] = temp
+	}
+
+	return tempMap
 }
 
 func AggregateDiskStatuses(disks []DiskStatus) (status DiskStatus) {

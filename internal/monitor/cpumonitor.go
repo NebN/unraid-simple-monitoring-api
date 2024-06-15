@@ -13,6 +13,7 @@ import (
 
 type CpuStatus struct {
 	LoadPercent float64 `json:"load_percent"`
+	Temp        uint64  `json:"temp"`
 }
 
 type CpuSnapshot struct {
@@ -50,6 +51,8 @@ func (m *CpuMonitor) ComputeCpuStatus() (status CpuStatus) {
 
 	status.LoadPercent = util.RoundTwoDecimals(loadPercent)
 	m.snapshot = snapshot
+
+	status.Temp = temp()
 
 	slog.Debug("CPU status computed", "status", status)
 	return
@@ -91,4 +94,30 @@ func newCpuSnapshot() (snapshot CpuSnapshot) {
 
 	slog.Debug("CPU", "snapshot", snapshot)
 	return
+}
+
+func temp() uint64 {
+	stat, err := os.Open("/sys/class/thermal/thermal_zone1/temp")
+	if err != nil {
+		slog.Error("CPU Cannot read temp data", slog.String("error", err.Error()))
+	}
+	defer stat.Close()
+
+	scanner := bufio.NewScanner(stat)
+	if !scanner.Scan() {
+		slog.Error("CPU unable to read /sys/class/thermal/thermal_zone1/temp")
+		return 0
+	}
+
+	firstLine := scanner.Text()
+	slog.Debug("CPU", "temp line", firstLine)
+	parsed, err := strconv.ParseUint(firstLine, 10, 64)
+	if err != nil {
+		slog.Error("CPU cannot parse cpu data from /proc/stat",
+			slog.String("trying to parse", firstLine),
+			slog.String("error", err.Error()))
+	}
+	slog.Debug("CPU temp parsed", "value", parsed)
+
+	return parsed / 1000
 }
