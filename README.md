@@ -63,7 +63,24 @@ disks:
     - /mnt/disk2
 ```
 
-Optionally you can specify the desired level of logging by adding the following line
+#### CPU Temperature file
+You can specify which file to read to obtain the correct CPU temperature.
+```yaml
+cpuTemp: /path/to/temp/file
+```
+To see where this information might be, you can try running the following command:
+```bash
+for dir in /sys/class/hwmon/hwmon*; do
+  echo "Directory: $dir"
+  for file in $dir/temp*_input; do
+    echo "Reading from: $file"
+    cat $file
+  done
+done
+```
+If no file is specified in the configuration, **the software will attempt to figure it out by running a very quick stress test** (a few seconds) while monitoring plausible files. You can find the result of this search in the application's logs. This method is of questionable reliability, specifying which file should be read is the preferred option. 
+
+#### Logging level
 ```yaml
 loggingLevel: DEBUG
 ```
@@ -337,3 +354,5 @@ You should now have 2 installations on your Docker Tab, and can switch between t
 > [!NOTE]  
 > Avoid having both active at the same time, as they share the same port and would therefore be unable to start the HTTP service.
  
+> [!WARNING]  
+> It is a good idea to switch back to the official build as soon as whatever fix you were testing is deployed to it. QA builds are unstable and are likely to not work correctly if you update them further.

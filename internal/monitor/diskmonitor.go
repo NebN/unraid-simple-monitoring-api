@@ -17,7 +17,7 @@ import (
 )
 
 type DiskStatus struct {
-	Name        string
+	Name        string  `json:"-"`
 	Path        string  `json:"mount"`
 	Total       uint64  `json:"total"`
 	Used        uint64  `json:"used"`

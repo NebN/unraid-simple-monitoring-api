@@ -64,7 +64,8 @@ type Conf struct {
 		Cache []string `yaml:"cache"`
 		Array []string `yaml:"array"`
 	} `yaml:"disks"`
-	LoggingLevel string `yaml:"loggingLevel"`
+	LoggingLevel string  `yaml:"loggingLevel"`
+	CpuTemp      *string `yaml:"cpuTemp"`
 }
 
 func readConf(path string) (Conf, error) {
@@ -92,7 +93,7 @@ type handler struct {
 func NewHandler(conf Conf) (handler handler) {
 	handler.DiskMonitor = monitor.NewDiskMonitor(conf.Disks.Cache, conf.Disks.Array)
 	handler.NetworkMonitor = monitor.NewNetworkMonitor(conf.Networks)
-	handler.CpuMonitor = monitor.NewCpuMonitor()
+	handler.CpuMonitor = monitor.NewCpuMonitor(conf.CpuTemp)
 	return
 }
 
