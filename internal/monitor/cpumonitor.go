@@ -2,18 +2,23 @@ package monitor
 
 import (
 	"bufio"
+	"context"
+	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/NebN/unraid-simple-monitoring-api/internal/util"
 )
 
 type CpuStatus struct {
 	LoadPercent float64 `json:"load_percent"`
-	Temp        uint64  `json:"temp"`
+	Temp        int     `json:"temp"`
 }
 
 type CpuSnapshot struct {
@@ -22,12 +27,15 @@ type CpuSnapshot struct {
 }
 
 type CpuMonitor struct {
-	snapshot CpuSnapshot
-	mu       sync.Mutex
+	snapshot    CpuSnapshot
+	mu          sync.Mutex
+	cpuTempPath *string
 }
 
-func NewCpuMonitor() (cm CpuMonitor) {
+func NewCpuMonitor(cpuTempPath *string) (cm CpuMonitor) {
+	cm.cpuTempPath = cpuTempPath
 	cm.snapshot = newCpuSnapshot()
+	cm.cpuTempPath = locateCpuTempFile(cpuTempPath)
 	return
 }
 
@@ -52,7 +60,7 @@ func (m *CpuMonitor) ComputeCpuStatus() (status CpuStatus) {
 	status.LoadPercent = util.RoundTwoDecimals(loadPercent)
 	m.snapshot = snapshot
 
-	status.Temp = temp()
+	status.Temp = m.temp()
 
 	slog.Debug("CPU status computed", "status", status)
 	return
@@ -96,28 +104,144 @@ func newCpuSnapshot() (snapshot CpuSnapshot) {
 	return
 }
 
-func temp() uint64 {
-	stat, err := os.Open("/sys/class/thermal/thermal_zone1/temp")
+func (monitor *CpuMonitor) temp() int {
+	if monitor.cpuTempPath == nil {
+		return 0
+	}
+
+	temp, err := readCpuTemp(*monitor.cpuTempPath)
 	if err != nil {
-		slog.Error("CPU Cannot read temp data", slog.String("error", err.Error()))
+		slog.Error("CPU error while reading temperature.", slog.String("error", err.Error()))
+		return 0
+	}
+
+	return temp
+}
+
+func locateCpuTempFile(cpuTempPath *string) *string {
+	if cpuTempPath != nil {
+		return cpuTempPath
+	}
+
+	slog.Info("CPU temperature file not defined, attempting to locate it. " +
+		"It can be specified in the configuration file. \"cpuTemp: /path/to/file\"")
+
+	possiblePatterns := []string{
+		// "/sys/class/thermal/thermal_zone*/temp", unsure if checking this makes sense
+		"/sys/class/hwmon/hwmon*/temp1_input",
+	}
+
+	type cpuFileGuess struct {
+		path        string
+		initialTemp int
+		finalTemp   int
+		delta       int
+	}
+
+	var guesses = make([]cpuFileGuess, 0)
+
+	for _, pattern := range possiblePatterns {
+		files, err := filepath.Glob(pattern)
+		if err != nil {
+			slog.Error("CPU Unable to read files", slog.String("pattern", pattern), slog.String("error", err.Error()))
+		}
+
+		for _, file := range files {
+			cpuTemp, err := readCpuTemp(file)
+			if err != nil {
+				slog.Warn(err.Error())
+			} else {
+				guesses = append(guesses, cpuFileGuess{
+					path:        file,
+					initialTemp: cpuTemp,
+				})
+			}
+		}
+	}
+
+	stressCPU(5 * time.Second)
+
+	for i, guess := range guesses {
+		newTemp, err := readCpuTemp(guess.path)
+		if err != nil {
+			slog.Warn(err.Error())
+		} else {
+			guessAtIndex := &guesses[i]
+			guessAtIndex.finalTemp = newTemp
+			guessAtIndex.delta = newTemp - guessAtIndex.initialTemp
+		}
+	}
+
+	var bestGuess cpuFileGuess = cpuFileGuess{
+		delta: 0,
+	}
+	for _, guess := range guesses {
+		if guess.delta > bestGuess.delta {
+			bestGuess = guess
+		}
+	}
+
+	if bestGuess.path != "" {
+		slog.Info("Best guess for CPU temperature file", "path", bestGuess.path,
+			"initial temp", bestGuess.initialTemp,
+			"final temp", bestGuess.finalTemp)
+		return &bestGuess.path
+	} else {
+		slog.Warn("Was unable to find a suitable CPU temperature file")
+		if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
+			slog.Debug("Guesses:")
+			for _, guess := range guesses {
+				slog.Debug(fmt.Sprintf("%v", guess))
+			}
+		}
+		return nil
+	}
+}
+
+func readCpuTemp(path string) (int, error) {
+	stat, err := os.Open(path)
+	if err != nil {
+		return 0, err
 	}
 	defer stat.Close()
 
 	scanner := bufio.NewScanner(stat)
 	if !scanner.Scan() {
-		slog.Error("CPU unable to read /sys/class/thermal/thermal_zone1/temp")
-		return 0
+		return 0, fmt.Errorf("unable to read file for CPU temp. path=%s", path)
 	}
 
 	firstLine := scanner.Text()
 	slog.Debug("CPU", "temp line", firstLine)
-	parsed, err := strconv.ParseUint(firstLine, 10, 64)
+	parsed, err := strconv.Atoi(firstLine)
 	if err != nil {
-		slog.Error("CPU cannot parse cpu data from /proc/stat",
-			slog.String("trying to parse", firstLine),
-			slog.String("error", err.Error()))
+		return 0, fmt.Errorf("unable to parse CPU temp data. string=%s, error=%s", firstLine, err.Error())
 	}
-	slog.Debug("CPU temp parsed", "value", parsed)
 
-	return parsed / 1000
+	return parsed / 1000, nil
+}
+
+func stressCPU(duration time.Duration) {
+	slog.Info("Running a very quick CPU stress test to attempt to locate the temperature file.",
+		"duration", duration)
+
+	stress := func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		end := time.Now().Add(duration)
+		for time.Now().Before(end) {
+			for i := 0; i < 100000; i++ {
+				_ = i * i
+			}
+		}
+	}
+
+	var wg sync.WaitGroup
+	cpus := runtime.NumCPU()
+	runtime.GOMAXPROCS(cpus)
+	wg.Add(cpus)
+
+	for range cpus {
+		go stress(&wg)
+	}
+
+	wg.Wait()
 }
