@@ -64,8 +64,10 @@ type Conf struct {
 		Cache []string `yaml:"cache"`
 		Array []string `yaml:"array"`
 	} `yaml:"disks"`
-	LoggingLevel string  `yaml:"loggingLevel"`
-	CpuTemp      *string `yaml:"cpuTemp"`
+	LoggingLevel string   `yaml:"loggingLevel"`
+	CpuTemp      *string  `yaml:"cpuTemp"`
+	Include      []string `yaml:"include"`
+	Exclude      []string `yaml:"exclude"`
 }
 
 func readConf(path string) (Conf, error) {
@@ -101,7 +103,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	slog.Debug("Request received", slog.String("request", fmt.Sprintf("%+v\n", r)))
 
-	cache, array := h.DiskMonitor.ComputeDiskUsage()
+	cache, array, parity := h.DiskMonitor.ComputeDiskUsage()
 	network := h.NetworkMonitor.ComputeNetworkRate()
 	cacheTotal := monitor.AggregateDiskStatuses(cache)
 	arrayTotal := monitor.AggregateDiskStatuses(array)
@@ -112,6 +114,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	response := Report{
 		Cache:        cache,
 		Array:        array,
+		Parity:       parity,
 		Network:      network,
 		ArrayTotal:   arrayTotal,
 		CacheTotal:   cacheTotal,
@@ -135,15 +138,16 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type Report struct {
-	Array        []monitor.DiskStatus  `json:"array"`
-	Cache        []monitor.DiskStatus  `json:"cache"`
-	Network      []monitor.NetworkRate `json:"network"`
-	ArrayTotal   monitor.DiskStatus    `json:"array_total"`
-	CacheTotal   monitor.DiskStatus    `json:"cache_total"`
-	NetworkTotal monitor.NetworkRate   `json:"network_total"`
-	Cpu          monitor.CpuStatus     `json:"cpu"`
-	Memory       monitor.MemoryStatus  `json:"memory"`
-	Error        *string               `json:"error"`
+	Array        []monitor.DiskStatus   `json:"array"`
+	Cache        []monitor.DiskStatus   `json:"cache"`
+	Parity       []monitor.ParityStatus `json:"parity"`
+	Network      []monitor.NetworkRate  `json:"network"`
+	ArrayTotal   monitor.DiskStatus     `json:"array_total"`
+	CacheTotal   monitor.DiskStatus     `json:"cache_total"`
+	NetworkTotal monitor.NetworkRate    `json:"network_total"`
+	Cpu          monitor.CpuStatus      `json:"cpu"`
+	Memory       monitor.MemoryStatus   `json:"memory"`
+	Error        *string                `json:"error"`
 }
 
 func newErrorReport(err string) (report Report) {
