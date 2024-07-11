@@ -133,6 +133,16 @@ The response will be formatted this way.
          "temp":37
       }
    ],
+   "parity":[
+      {
+         "name":"parity",
+         "temp":31
+      },
+      {
+         "name":"parity2",
+         "temp":0
+      }
+   ],
    "network":[
       {
          "interface":"docker0",
@@ -254,6 +264,18 @@ The following are examples for each currently available field.
   label: your label
   format: number
   suffix: GiB
+```
+
+- #### Parity
+```yaml
+- field:
+    parity: 
+      0: temp 
+      # '0' is the index of the parity disk, 0 = the first 
+      # 'temp' is the field you wish to read
+  label: your label
+  format: number
+  suffix: °
 ```
 
 - #### Network Total

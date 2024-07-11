@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,6 +17,8 @@ import (
 	"gopkg.in/ini.v1"
 )
 
+const parityLabel = "parity"
+
 type DiskStatus struct {
 	Name        string  `json:"-"`
 	Path        string  `json:"mount"`
@@ -25,6 +28,11 @@ type DiskStatus struct {
 	UsedPercent float64 `json:"used_percent"`
 	FreePercent float64 `json:"free_percent"`
 	Temp        uint64  `json:"temp"`
+}
+
+type ParityStatus struct {
+	Name string `json:"name"`
+	Temp uint64 `json:"temp"`
 }
 
 type DiskMonitor struct {
@@ -64,7 +72,7 @@ func NewDiskMonitor(cache []string, array []string) (dm DiskMonitor) {
 	return
 }
 
-func (monitor *DiskMonitor) ComputeDiskUsage() ([]DiskStatus, []DiskStatus) {
+func (monitor *DiskMonitor) ComputeDiskUsage() ([]DiskStatus, []DiskStatus, []ParityStatus) {
 	temps := readDiskTemps()
 
 	var wg sync.WaitGroup
@@ -108,7 +116,20 @@ func (monitor *DiskMonitor) ComputeDiskUsage() ([]DiskStatus, []DiskStatus) {
 	cache := computeGroup(monitor.cache)
 	array := computeGroup(monitor.array)
 
-	return cache, array
+	parity := make([]ParityStatus, 0)
+	for name, temp := range temps {
+		if strings.Contains(name, parityLabel) {
+			parity = append(parity, ParityStatus{
+				Name: name,
+				Temp: temp,
+			})
+		}
+	}
+
+	sort.Slice(parity, func(i, j int) bool {
+		return parity[i].Name < parity[j].Name
+	})
+	return cache, array, parity
 }
 
 func diskUsage(index int, path string, wg *sync.WaitGroup, diskChan chan util.IndexedValue[DiskStatus]) {
