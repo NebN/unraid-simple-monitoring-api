@@ -28,11 +28,21 @@ type DiskStatus struct {
 	UsedPercent float64 `json:"used_percent"`
 	FreePercent float64 `json:"free_percent"`
 	Temp        uint64  `json:"temp"`
+	Id          string  `json:"disk_id"`
+	IsSpinning  bool    `json:"is_spinning"`
 }
 
 type ParityStatus struct {
-	Name string `json:"name"`
-	Temp uint64 `json:"temp"`
+	Name 		string `json:"name"`
+	Temp 		uint64 `json:"temp"`
+	Id   		string  `json:"disk_id"`
+	IsSpinning  bool    `json:"is_spinning"`
+}
+
+type DiskIni struct {
+    ID   string
+    Temp uint64
+	Spundown bool
 }
 
 type DiskMonitor struct {
@@ -73,7 +83,7 @@ func NewDiskMonitor(cache []string, array []string) (dm DiskMonitor) {
 }
 
 func (monitor *DiskMonitor) ComputeDiskUsage() ([]DiskStatus, []DiskStatus, []ParityStatus) {
-	temps := readDiskTemps()
+	diskIniMap := readDiskIni()
 
 	var wg sync.WaitGroup
 
@@ -100,12 +110,11 @@ func (monitor *DiskMonitor) ComputeDiskUsage() ([]DiskStatus, []DiskStatus, []Pa
 
 		disks := make([]DiskStatus, len(paths))
 		for disk := range diskChan {
-			temp, isSet := temps[disk.Value.Name]
-			if isSet {
-				disk.Value.Temp = temp
-			} else {
-				slog.Warn("Disk temperature not set", "name", disk.Value.Name)
-			}
+			diskIni := diskIniMap[disk.Value.Name]
+			
+			disk.Value.Id = diskIni.ID
+			disk.Value.Temp = diskIni.Temp
+			disk.Value.IsSpinning = !diskIni.Spundown
 
 			disks[disk.Index] = disk.Value
 		}
@@ -117,11 +126,13 @@ func (monitor *DiskMonitor) ComputeDiskUsage() ([]DiskStatus, []DiskStatus, []Pa
 	array := computeGroup(monitor.array)
 
 	parity := make([]ParityStatus, 0)
-	for name, temp := range temps {
+	for name, diskIni := range diskIniMap {
 		if strings.Contains(name, parityLabel) {
 			parity = append(parity, ParityStatus{
 				Name: name,
-				Temp: temp,
+				Temp: diskIni.Temp,
+				Id: diskIni.ID,
+				IsSpinning: !diskIni.Spundown,
 			})
 		}
 	}
@@ -254,50 +265,63 @@ func (monitor *DiskMonitor) readZfsDatasets() map[string]ZfsDataset {
 	return zfsDatasets
 }
 
-func readDiskTemps() map[string]uint64 {
-	pathToQuery := "/var/local/emhttp/disks.ini"
+func readDiskIni() map[string]DiskIni {
+    pathToQuery := "/var/local/emhttp/disks.ini"
 
-	var hostFsPrefix, isSet = os.LookupEnv("HOSTFS_PREFIX")
-	if isSet {
-		slog.Debug("Disk host prefix is set", "value", hostFsPrefix)
-		pathToQuery = filepath.Join(hostFsPrefix, pathToQuery)
-	}
+    var hostFsPrefix, isSet = os.LookupEnv("HOSTFS_PREFIX")
+    if isSet {
+        slog.Debug("Disk host prefix is set", "value", hostFsPrefix)
+        pathToQuery = filepath.Join(hostFsPrefix, pathToQuery)
+    }
 
-	tempMap := make(map[string]uint64)
+    diskIniMap := make(map[string]DiskIni)
 
-	temps, err := ini.Load(pathToQuery)
-	if err != nil {
-		slog.Error("Disk unable to read disks.ini", "error", slog.String("error", err.Error()))
-	}
+    disks, err := ini.Load(pathToQuery)
+    if err != nil {
+        slog.Error("Disk unable to read disks.ini", "error", slog.String("error", err.Error()))
+    }
 
-	for _, section := range temps.Sections() {
-		if section.Name() == "DEFAULT" {
-			continue
-		}
+    for _, section := range disks.Sections() {
+        if section.Name() == "DEFAULT" {
+            continue
+        }
 
-		sectionName := strings.Trim(section.Name(), "\"")
+        sectionName := strings.Trim(section.Name(), "\"")
 
-		slog.Debug("Disk reading section", "section", sectionName)
-		var temp uint64
-		tempString, err := section.GetKey("temp")
-		if err != nil {
-			slog.Error("Disk unable to read disks.ini section", "section", sectionName, "error", slog.String("error", err.Error()))
-			continue
-		}
+        slog.Debug("Disk reading section", "section", sectionName)
 
-		if tempString.String() != "*" {
-			temp, err = strconv.ParseUint(tempString.String(), 10, 16)
-			if err != nil {
-				slog.Error("Disk unable to parse disk temp", "string", tempString.String(), "error", slog.String("error", err.Error()))
-			}
-		} else {
-			slog.Debug("Disk temp unavailable", "disk", sectionName)
-		}
+        idString, err := section.GetKey("id")
+        if err != nil {
+            slog.Error("Disk unable to read disks.ini section", "section", sectionName, "error", slog.String("error", err.Error()))
+            continue
+        }
 
-		tempMap[sectionName] = temp
-	}
+        var temp uint64
+        tempString, err := section.GetKey("temp")
+        if err != nil {
+            slog.Error("Disk unable to read disks.ini section", "section", sectionName, "error", slog.String("error", err.Error()))
+            continue
+        }
 
-	return tempMap
+        if tempString.String() != "*" {
+            temp, err = strconv.ParseUint(tempString.String(), 10, 16)
+            if err != nil {
+                slog.Error("Disk unable to parse disk temp", "string", tempString.String(), "error", slog.String("error", err.Error()))
+            }
+        } else {
+            slog.Debug("Disk temp unavailable", "disk", sectionName)
+        }
+
+		spunDown, err := section.GetKey("spundown")
+
+        diskIniMap[sectionName] = DiskIni{
+            ID:   idString.String(),
+            Temp: temp,
+			Spundown: spunDown.String() == "1",
+        }
+    }
+
+    return diskIniMap
 }
 
 func AggregateDiskStatuses(disks []DiskStatus) (status DiskStatus) {
