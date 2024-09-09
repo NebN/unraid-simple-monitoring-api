@@ -42,7 +42,7 @@ type ParityStatus struct {
 type DiskIni struct {
     ID   string
     Temp uint64
-	Spundown bool
+    Spundown bool
 }
 
 type DiskMonitor struct {
@@ -317,7 +317,7 @@ func readDiskIni() map[string]DiskIni {
         diskIniMap[sectionName] = DiskIni{
             ID:   idString.String(),
             Temp: temp,
-			Spundown: spunDown.String() == "1",
+            Spundown: spunDown.String() == "1",
         }
     }
 

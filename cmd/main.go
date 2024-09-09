@@ -125,16 +125,15 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responseJson, err := json.Marshal(response)
+	w.Header().Set("Content-Type", "application/json")
 	if err != nil {
 		slog.Error("Error trying to respond to API call",
 			slog.String("error", err.Error()),
 			slog.String("attempting to marshal", fmt.Sprintf("%+v\n", response)))
 		errorResponse, _ := json.Marshal(newErrorReport(err.Error()))
-		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(errorResponse))
 	} else {
 		slog.Debug("Responding to request", "response", responseJson)
-		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(responseJson))
 	}
 }
