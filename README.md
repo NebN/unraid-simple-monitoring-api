@@ -101,7 +101,9 @@ The response will be formatted this way.
          "free":1860,
          "used_percent":50.05,
          "free_percent":49.95,
-         "temp":32
+         "temp":32,
+         "disk_id":"WDC_WD40EFPX-1234567_WD-WXC12345678A",
+         "is_spinning":true
       },
       {
          "mount":"/mnt/disk2",
@@ -110,7 +112,9 @@ The response will be formatted this way.
          "free":2358,
          "used_percent":36.68,
          "free_percent":63.32,
-         "temp":34
+         "temp":34,
+         "disk_id":"WDC_WD40EFPX-1234567_WD-WXC12345678B",
+         "is_spinning":true
       },
       {
          "mount":"/mnt/disk3",
@@ -119,7 +123,9 @@ The response will be formatted this way.
          "free":924,
          "used_percent":0.75,
          "free_percent":99.25,
-         "temp":0
+         "temp":0,
+         "disk_id":"WDC_WD40EFPX-1234567_WD-WXC12345678C",
+         "is_spinning":false
       }
    ],
    "cache":[
@@ -130,17 +136,23 @@ The response will be formatted this way.
          "free":255,
          "used_percent":45.16,
          "free_percent":54.84,
-         "temp":37
+         "temp":37,
+         "disk_id":"Samsung_SSD_870_EVO_1TB_S123456789",
+         "is_spinning":true
       }
    ],
    "parity":[
       {
          "name":"parity",
-         "temp":31
+         "temp":31,
+         "disk_id":"WDC_WD40EFPX-1234567_WD-WXC12345678D",
+         "is_spinning":true
       },
       {
          "name":"parity2",
-         "temp":0
+         "temp":0,
+         "disk_id":"",
+         "is_spinning":false
       }
    ],
    "network":[
