@@ -3,8 +3,8 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/nebn/unraid-simple-monitoring-api?style=for-the-badge)
 
 # Unraid Simple Monitoring API
-Simple rest API to monitor basic metrics, currently supports:
-- Disk utilization and temperature
+Simple REST API to monitor basic metrics, currently supports:
+- Disk utilization and status
 - Network traffic
 - CPU load and temperature
 - Memory utilization
@@ -12,15 +12,16 @@ Simple rest API to monitor basic metrics, currently supports:
 Originally created for [Unraid](https://unraid.net/) for use with [Homepage](https://gethomepage.dev/latest/widgets/services/customapi/).
 
 ## Table of Contents
-1. [Utilization with Unraid](#unraid)
-   1. [Installation](#unraid-install)
-   2. [Configuration](#unraid-conf)
-   3. [ZFS](#unraid-zfs)
-   4. [Calling the API](#unraid-use)
-2. [Integration with Homepage](#homepage)
-   1. [Configuration](#homepage-conf)
-3. [How reliable are the measurements?](#caveat)
-4. [Installing a QA build](#qa)
+- [Utilization with Unraid](#unraid)
+   - [Installation](#unraid-install)
+   - [Configuration](#unraid-conf)
+   - [ZFS](#unraid-zfs)
+   - [Calling the API](#unraid-use)
+- [Integration with Homepage](#homepage)
+   - [Configuration](#homepage-conf)
+      - [Available Fields](#available-fields)
+- [How reliable are the measurements?](#caveat)
+- [Installing a QA build](#qa)
 
 ## Utilization with Unraid <a id="unraid"></a> 
 ### Installation <a id="unraid-install"></a>
@@ -172,23 +173,25 @@ The response will be formatted this way.
       }
    ],
    "array_total":{
-      "mount":"total",
+      "mount":"/mnt/disk*",
       "total":13034,
       "used":3342,
       "free":9692,
       "used_percent":25.64,
-      "free_percent":74.36
+      "free_percent":74.36,
+      "disk_id":"WDC_WD40EFPX-1234567_WD-WXC12345678A WDC_WD40EFPX-1234567_WD-WXC12345678B WDC_WD40EFPX-1234567_WD-WXC12345678C"
    },
    "cache_total":{
-      "mount":"total",
+      "mount":"/mnt/cache",
       "total":465,
       "used":210,
       "free":255,
       "used_percent":45.16,
-      "free_percent":54.84
+      "free_percent":54.84,
+      "disk_id":"Samsung_SSD_870_EVO_1TB_S123456789"
    },
    "network_total":{
-      "interface":"total",
+      "interface":"docker0 eth0",
       "rx_MiBs":0.02,
       "tx_MiBs":5.22,
       "rx_Mbps":0.13,
@@ -246,39 +249,41 @@ Your homepage `services.yaml` should look like this if you want it to look like 
               suffix: MiB/s
 ```
 
-The following are examples for each currently available field.
-- #### Array Total
+#### Available fields<a id="available-fields"></a>
+##### Array Total
 ```yaml
 - field:
-    array_total: free # or used, total, used_percent, free_percent
+    array_total: free # or used, total, used_percent, free_percent, temp, mount, disk_id, is_spinning
   label: your label
   format: number # or percentage
   suffix: GiB # or nothing in case of percentages, or whatver you prefer
 ```
+<br>
 
-- #### Cache Total
+##### Cache Total
 ```yaml
 - field:
-    cache_total: free # or used, total, used_percent, free_percent
+    cache_total: free # or used, total, used_percent, free_percent, temp, mount, disk_id, is_spinning
   label: your label
   format: number # or percentage
   suffix: GiB # or nothing in case of percentages, or whatver you prefer
 ```
+<br>
 
-- #### Specific Disk
+##### Specific Disk
 ```yaml
 - field:
     array: # or cache
       0: free 
       # '0' is the index of the disk, 0 = the first 
       # 'free' is the field you wish to read
-      # specific disks (or cache disks using btrfs) also have the 'temp' field
   label: your label
   format: number
   suffix: GiB
 ```
+<br>
 
-- #### Parity
+##### Parity
 ```yaml
 - field:
     parity: 
@@ -289,8 +294,9 @@ The following are examples for each currently available field.
   format: number
   suffix: °
 ```
+<br>
 
-- #### Network Total
+##### Network Total
 ```yaml
 - field:
     network_total: rx_MiBs # or tx_MiBs, rx_Mbps, tx_Mbps
@@ -298,8 +304,9 @@ The following are examples for each currently available field.
   format: float # or 'number' to round to the nearest integer
   suffix: MiB/s # or Mbps, or whatever you prefer
 ```
+<br>
 
-- #### Specific Network
+##### Specific Network
 ```yaml
 - field:
     network:
@@ -310,22 +317,26 @@ The following are examples for each currently available field.
   format: float
   suffix: MiB/s 
 ```
+<br>
 
-- #### CPU
+##### CPU
 ```yaml
 - field:
     cpu: load_percent # or temp
   label: your label
   format: percent # or number
 ```
+<br>
 
-- #### Memory
+##### Memory
 ```yaml
 - field:
     memory: used_percent # or free_percent, total, used, free
   label: your label
   format: percent
 ```
+<br>
+
 > [!TIP]
 > If you wish to show more than the usual 4 allowed fields, you can set the widget property `display: list` to have the fields displayed in a vertical list that can be arbitrarily long.
 > ```yaml

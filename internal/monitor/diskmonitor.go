@@ -33,16 +33,16 @@ type DiskStatus struct {
 }
 
 type ParityStatus struct {
-	Name 		string `json:"name"`
-	Temp 		uint64 `json:"temp"`
-	Id   		string  `json:"disk_id"`
-	IsSpinning  bool    `json:"is_spinning"`
+	Name       string `json:"name"`
+	Temp       uint64 `json:"temp"`
+	Id         string `json:"disk_id"`
+	IsSpinning bool   `json:"is_spinning"`
 }
 
 type DiskIni struct {
-    ID   string
-    Temp uint64
-    Spundown bool
+	Id       string
+	Temp     uint64
+	Spundown bool
 }
 
 type DiskMonitor struct {
@@ -111,8 +111,8 @@ func (monitor *DiskMonitor) ComputeDiskUsage() ([]DiskStatus, []DiskStatus, []Pa
 		disks := make([]DiskStatus, len(paths))
 		for disk := range diskChan {
 			diskIni := diskIniMap[disk.Value.Name]
-			
-			disk.Value.Id = diskIni.ID
+
+			disk.Value.Id = diskIni.Id
 			disk.Value.Temp = diskIni.Temp
 			disk.Value.IsSpinning = !diskIni.Spundown
 
@@ -129,9 +129,9 @@ func (monitor *DiskMonitor) ComputeDiskUsage() ([]DiskStatus, []DiskStatus, []Pa
 	for name, diskIni := range diskIniMap {
 		if strings.Contains(name, parityLabel) {
 			parity = append(parity, ParityStatus{
-				Name: name,
-				Temp: diskIni.Temp,
-				Id: diskIni.ID,
+				Name:       name,
+				Temp:       diskIni.Temp,
+				Id:         diskIni.Id,
 				IsSpinning: !diskIni.Spundown,
 			})
 		}
@@ -266,77 +266,105 @@ func (monitor *DiskMonitor) readZfsDatasets() map[string]ZfsDataset {
 }
 
 func readDiskIni() map[string]DiskIni {
-    pathToQuery := "/var/local/emhttp/disks.ini"
+	pathToQuery := "/var/local/emhttp/disks.ini"
 
-    var hostFsPrefix, isSet = os.LookupEnv("HOSTFS_PREFIX")
-    if isSet {
-        slog.Debug("Disk host prefix is set", "value", hostFsPrefix)
-        pathToQuery = filepath.Join(hostFsPrefix, pathToQuery)
-    }
+	var hostFsPrefix, isSet = os.LookupEnv("HOSTFS_PREFIX")
+	if isSet {
+		slog.Debug("Disk host prefix is set", "value", hostFsPrefix)
+		pathToQuery = filepath.Join(hostFsPrefix, pathToQuery)
+	}
 
-    diskIniMap := make(map[string]DiskIni)
+	diskIniMap := make(map[string]DiskIni)
 
-    disks, err := ini.Load(pathToQuery)
-    if err != nil {
-        slog.Error("Disk unable to read disks.ini", "error", slog.String("error", err.Error()))
-    }
+	disks, err := ini.Load(pathToQuery)
+	if err != nil {
+		slog.Error("Disk unable to read disks.ini", "error", slog.String("error", err.Error()))
+	}
 
-    for _, section := range disks.Sections() {
-        if section.Name() == "DEFAULT" {
-            continue
-        }
+	for _, section := range disks.Sections() {
+		if section.Name() == "DEFAULT" {
+			continue
+		}
 
-        sectionName := strings.Trim(section.Name(), "\"")
+		sectionName := strings.Trim(section.Name(), "\"")
 
-        slog.Debug("Disk reading section", "section", sectionName)
+		slog.Debug("Disk reading section", "section", sectionName)
 
-        idString, err := section.GetKey("id")
-        if err != nil {
-            slog.Error("Disk unable to read disks.ini section", "section", sectionName, "error", slog.String("error", err.Error()))
-            continue
-        }
+		idKey := "id"
+		idString, err := section.GetKey(idKey)
+		if err != nil {
+			slog.Error("Disk unable to read disks.ini section", "section", sectionName, "key", idKey, "error", slog.String("error", err.Error()))
+			continue
+		}
 
-        var temp uint64
-        tempString, err := section.GetKey("temp")
-        if err != nil {
-            slog.Error("Disk unable to read disks.ini section", "section", sectionName, "error", slog.String("error", err.Error()))
-            continue
-        }
+		var temp uint64
+		tempKey := "temp"
+		tempString, err := section.GetKey(tempKey)
+		if err != nil {
+			slog.Error("Disk unable to read disks.ini section", "section", sectionName, "key", tempKey, "error", slog.String("error", err.Error()))
+			continue
+		}
 
-        if tempString.String() != "*" {
-            temp, err = strconv.ParseUint(tempString.String(), 10, 16)
-            if err != nil {
-                slog.Error("Disk unable to parse disk temp", "string", tempString.String(), "error", slog.String("error", err.Error()))
-            }
-        } else {
-            slog.Debug("Disk temp unavailable", "disk", sectionName)
-        }
+		if tempString.String() != "*" {
+			temp, err = strconv.ParseUint(tempString.String(), 10, 16)
+			if err != nil {
+				slog.Error("Disk unable to parse disk temp", "string", tempString.String(), "error", slog.String("error", err.Error()))
+			}
+		} else {
+			slog.Debug("Disk temp unavailable", "disk", sectionName)
+		}
 
-		spunDown, err := section.GetKey("spundown")
+		spunDownKey := "spundown"
+		spunDown, err := section.GetKey(spunDownKey)
+		if err != nil {
+			slog.Error("Disk unable to read disks.ini section", "section", sectionName, "key", spunDownKey, "error", slog.String("error", err.Error()))
+			continue
+		}
 
-        diskIniMap[sectionName] = DiskIni{
-            ID:   idString.String(),
-            Temp: temp,
-            Spundown: spunDown.String() == "1",
-        }
-    }
+		diskIniMap[sectionName] = DiskIni{
+			Id:       idString.String(),
+			Temp:     temp,
+			Spundown: spunDown.String() == "1",
+		}
+	}
 
-    return diskIniMap
+	return diskIniMap
 }
 
 func AggregateDiskStatuses(disks []DiskStatus) (status DiskStatus) {
+	paths := make([]string, 0, len(disks))
+	temps := make([]float64, 0)
+	ids := make([]string, 0, len(disks))
+	isSpinning := false
+
 	for _, disk := range disks {
+		paths = append(paths, disk.Path)
+		ids = append(ids, disk.Id)
+		isSpinning = isSpinning || disk.IsSpinning
+		if disk.Temp > 0 {
+			temps = append(temps, float64(disk.Temp))
+		}
 		status.Total = status.Total + disk.Total
 		status.Used = status.Used + disk.Used
 		slog.Debug("Disk aggregating usage", "current_disk", disk, "running_total", status)
 	}
+
 	status.Free = status.Total - status.Used
+
 	if status.Total > 0 {
 		status.FreePercent = util.RoundTwoDecimals(float64(status.Free) / float64(status.Total) * 100)
 		status.UsedPercent = util.RoundTwoDecimals(100 - status.FreePercent)
 	} else {
 		slog.Warn("Disk aggregation total space is 0, free/used percent will be returned as 0")
 	}
-	status.Path = "total"
+
+	slog.Debug("Disk figuring out common base path", "paths", paths)
+	status.Path = util.CommonBase(paths...) + "*"
+	slog.Debug("Disk common base path", "path", status.Path)
+
+	status.Temp = uint64(util.Average(temps))
+	status.IsSpinning = isSpinning
+	status.Id = strings.Join(ids, " ")
+
 	return
 }

@@ -187,13 +187,18 @@ func newNetworkSnapshot(iname string) (network NetworkSnapshot) {
 }
 
 func AggregateNetworkRates(networks []NetworkRate) (status NetworkRate) {
+	names := make([]string, 0, len(networks))
+
 	for _, network := range networks {
+		names = append(names, network.Iname)
 		status.RxMbps = status.RxMbps + network.RxMbps
 		status.TxMbps = status.TxMbps + network.TxMbps
 		status.RxMiBs = status.RxMiBs + network.RxMiBs
 		status.TxMiBs = status.TxMiBs + network.TxMiBs
 		slog.Debug("Network aggregation", "network", network, "running_total", status)
 	}
-	status.Iname = "total"
+
+	status.Iname = strings.Join(names, " ")
+
 	return
 }
