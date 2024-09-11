@@ -136,3 +136,77 @@ func TestParseZfsSize(t *testing.T) {
 func floatAreEqualEnough(a float64, b float64) bool {
 	return math.Abs(a-b) < 1e-9
 }
+
+func TestCommonBase(t *testing.T) {
+	a := "thisPartIsInCommonX"
+	b := "thisPartIsInCommonY"
+	expected := "thisPartIsInCommon"
+
+	res := CommonBase(a, b)
+
+	if res != expected {
+		t.Fatalf("expected: %s, got: %s", expected, res)
+	}
+}
+
+func TestCommonBaseEmpty(t *testing.T) {
+	a := "not empty"
+	b := ""
+	c := "not quite empty"
+	expected := ""
+
+	res := CommonBase(a, b, c)
+
+	if res != expected {
+		t.Fatalf("expected: %s, got: %s", expected, res)
+	}
+}
+
+func TestCommonBaseIdentical(t *testing.T) {
+	a := "identical"
+	b := "identical"
+	expected := "identical"
+
+	res := CommonBase(a, b)
+
+	if res != expected {
+		t.Fatalf("expected: %s, got: %s", expected, res)
+	}
+}
+
+func TestCommonBaseMultiple(t *testing.T) {
+	a := "/common/part/ends/here/abc"
+	b := "/common/part/ends/here/bcd"
+	c := "/common/part/ends/here/cde"
+
+	expected := "/common/part/ends/here/"
+
+	res := CommonBase(a, b, c)
+
+	if res != expected {
+		t.Fatalf("expected: %s, got: %s", expected, res)
+	}
+}
+
+func TestCommonBaseSingle(t *testing.T) {
+	a := "single"
+
+	expected := "single"
+
+	res := CommonBase(a)
+
+	if res != expected {
+		t.Fatalf("expected: %s, got: %s", expected, res)
+	}
+}
+
+func TestCommonBaseNothing(t *testing.T) {
+
+	expected := ""
+
+	res := CommonBase()
+
+	if res != expected {
+		t.Fatalf("expected: %s, got: %s", expected, res)
+	}
+}
