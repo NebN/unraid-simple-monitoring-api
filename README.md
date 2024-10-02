@@ -90,7 +90,7 @@ Make a request to
 http://your-unraid-ip:24940
 ```
 
-The response will be formatted this way.
+The response will be shaped this way.
 
 ```json
 {
@@ -201,6 +201,24 @@ The response will be formatted this way.
       "load_percent":10.6,
       "temp":41
    },
+   "cores": [
+    {
+      "name": "cpu0",
+      "load_percent": 6.55
+    },
+    {
+      "name": "cpu1",
+      "load_percent": 8.55
+    },
+    {
+      "name": "cpu2",
+      "load_percent": 4.94
+    },
+    {
+      "name": "cpu3",
+      "load_percent": 8.37
+    }
+   ],
    "memory":{
       "total":15788,
       "used":1288,
@@ -326,6 +344,18 @@ Your homepage `services.yaml` should look like this if you want it to look like 
   label: your label
   format: percent # or number
 ```
+
+<br>
+
+##### Cores
+```yaml
+- field:
+    cores:
+      0: load_percent
+  label: cpu0
+  format: percent
+```
+
 <br>
 
 ##### Memory

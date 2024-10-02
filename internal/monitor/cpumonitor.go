@@ -16,38 +16,65 @@ import (
 	"github.com/NebN/unraid-simple-monitoring-api/internal/util"
 )
 
+type CoreStatus struct {
+	Name        string  `json:"name"`
+	LoadPercent float64 `json:"load_percent"`
+}
+
 type CpuStatus struct {
 	LoadPercent float64 `json:"load_percent"`
 	Temp        int     `json:"temp"`
 }
 
 type CpuSnapshot struct {
+	name  string
 	idle  uint64
 	total uint64
 }
 
 type CpuMonitor struct {
-	snapshot    CpuSnapshot
-	mu          sync.Mutex
-	cpuTempPath *string
+	snapshot       CpuSnapshot
+	coresSnapshots []CpuSnapshot
+	mu             sync.Mutex
+	cpuTempPath    *string
 }
 
 func NewCpuMonitor(cpuTempPath *string) (cm CpuMonitor) {
 	cm.cpuTempPath = cpuTempPath
-	cm.snapshot = newCpuSnapshot()
+	cm.snapshot, cm.coresSnapshots = newCpuSnapshot()
 	cm.cpuTempPath = locateCpuTempFile(cpuTempPath)
 	return
 }
 
-func (m *CpuMonitor) ComputeCpuStatus() (status CpuStatus) {
+func (m *CpuMonitor) ComputeCpuStatus() (status CpuStatus, cores []CoreStatus) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	snapshot := newCpuSnapshot()
+	snapshot, coresSnapshots := newCpuSnapshot()
 	oldSnapshot := m.snapshot
+	oldCoreSnapshots := m.coresSnapshots
 
-	deltaIdle := snapshot.idle - oldSnapshot.idle
-	deltaTotal := snapshot.total - oldSnapshot.total
+	status.LoadPercent = computeLoad(oldSnapshot, snapshot)
+	status.Temp = m.temp()
+
+	for i, coreSnapshot := range coresSnapshots {
+		coreStatus := CoreStatus{
+			Name:        coreSnapshot.name,
+			LoadPercent: computeLoad(oldCoreSnapshots[i], coreSnapshot),
+		}
+		cores = append(cores, coreStatus)
+	}
+
+	m.snapshot = snapshot
+	m.coresSnapshots = coresSnapshots
+
+	slog.Debug("CPU status computed", "status", status)
+	return
+}
+
+func computeLoad(a CpuSnapshot, b CpuSnapshot) float64 {
+	deltaIdle := b.idle - a.idle
+	deltaTotal := b.total - a.total
 
 	slog.Debug("CPU snapshot delta", "idle", deltaIdle, "total", deltaTotal)
 	loadPercent := 0.0
@@ -57,16 +84,10 @@ func (m *CpuMonitor) ComputeCpuStatus() (status CpuStatus) {
 		slog.Warn("CPU delta between snapshots' total values is 0, cpu load percent will be returned as 0")
 	}
 
-	status.LoadPercent = util.RoundTwoDecimals(loadPercent)
-	m.snapshot = snapshot
-
-	status.Temp = m.temp()
-
-	slog.Debug("CPU status computed", "status", status)
-	return
+	return util.RoundTwoDecimals(loadPercent)
 }
 
-func newCpuSnapshot() (snapshot CpuSnapshot) {
+func newCpuSnapshot() (cpu CpuSnapshot, cores []CpuSnapshot) {
 	stat, err := os.Open("/proc/stat")
 	if err != nil {
 		slog.Error("CPU Cannot read data", slog.String("error", err.Error()))
@@ -74,14 +95,32 @@ func newCpuSnapshot() (snapshot CpuSnapshot) {
 	defer stat.Close()
 
 	scanner := bufio.NewScanner(stat)
-	if !scanner.Scan() {
-		slog.Error("CPU unable to read /proc/stat")
-		return
+
+	for hasNext := scanner.Scan(); hasNext; hasNext = scanner.Scan() {
+		line := scanner.Text()
+		slog.Debug("CPU", "line", line)
+		fields := strings.Fields(line)
+		name := fields[0]
+		if !strings.Contains(name, ("cpu")) {
+			continue
+		}
+
+		if name == "cpu" {
+			cpu = parseCpuStatLine(fields)
+			cpu.name = name
+		} else {
+			core := parseCpuStatLine(fields)
+			core.name = name
+			cores = append(cores, core)
+		}
+
 	}
 
-	firstLine := scanner.Text()
-	slog.Debug("CPU", "line", firstLine)
-	items := strings.Fields(firstLine)
+	return
+}
+
+func parseCpuStatLine(items []string) (snapshot CpuSnapshot) {
+
 	var sum uint64 = 0
 	for i, item := range items[1:] {
 		parsed, err := strconv.ParseUint(item, 10, 64)
@@ -99,8 +138,8 @@ func newCpuSnapshot() (snapshot CpuSnapshot) {
 	}
 
 	snapshot.total = sum
-
 	slog.Debug("CPU", "snapshot", snapshot)
+
 	return
 }
 
