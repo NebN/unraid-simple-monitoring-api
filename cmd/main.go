@@ -108,7 +108,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	cacheTotal := monitor.AggregateDiskStatuses(cache)
 	arrayTotal := monitor.AggregateDiskStatuses(array)
 	networkTotal := monitor.AggregateNetworkRates(network)
-	cpu := h.CpuMonitor.ComputeCpuStatus()
+	cpu, cores := h.CpuMonitor.ComputeCpuStatus()
 	memory := h.MemoryMonitor.ComputeMemoryUsage()
 
 	response := Report{
@@ -120,6 +120,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		CacheTotal:   cacheTotal,
 		NetworkTotal: networkTotal,
 		Cpu:          cpu,
+		Cores:        cores,
 		Memory:       memory,
 		Error:        nil,
 	}
@@ -147,6 +148,7 @@ type Report struct {
 	CacheTotal   monitor.DiskStatus     `json:"cache_total"`
 	NetworkTotal monitor.NetworkRate    `json:"network_total"`
 	Cpu          monitor.CpuStatus      `json:"cpu"`
+	Cores        []monitor.CoreStatus   `json:"cores"`
 	Memory       monitor.MemoryStatus   `json:"memory"`
 	Error        *string                `json:"error"`
 }
