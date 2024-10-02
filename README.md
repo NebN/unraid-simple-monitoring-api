@@ -9,7 +9,7 @@ Simple REST API to monitor basic metrics, currently supports:
 - CPU load and temperature
 - Memory utilization
 
-Originally created for [Unraid](https://unraid.net/) for use with [Homepage](https://gethomepage.dev/latest/widgets/services/customapi/).
+Originally created for [Unraid](https://unraid.net/) for use with [Homepage](https://gethomepage.dev/widgets/services/customapi/).
 
 ## Table of Contents
 - [Utilization with Unraid](#unraid)
@@ -215,7 +215,7 @@ The response will be formatted this way.
 ## Integration with Homepage <a id="homepage"></a> 
 ![image](https://github.com/NebN/unraid-simple-monitoring-api/assets/57036949/0175ffbd-fe84-494c-a29f-264f09aae6f3)
 ### Configuration <a id="homepage-conf"></a>
-Check out [Hompage's official custom API widget documentation](https://gethomepage.dev/latest/widgets/services/customapi/).  
+Check out [Hompage's official custom API widget documentation](https://gethomepage.dev/widgets/services/customapi/).  
 Your homepage `services.yaml` should look like this if you want it to look like the above example, showing cache and network data. 
 
 ```yaml
