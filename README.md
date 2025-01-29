@@ -13,13 +13,14 @@ Originally created for [Unraid](https://unraid.net/) for use with [Homepage](htt
 
 ## Table of Contents
 - [Utilization with Unraid](#unraid)
-    - [Installation](#unraid-install)
-    - [Configuration](#unraid-conf)
+   - [Installation](#unraid-install)
+   - [Configuration](#unraid-conf)
       - [Additional pools](#pools)
       - [CPU Temperature](#cpu-temp)
-      - [Logging](#logging)
-    - [ZFS](#unraid-zfs)
-    - [Calling the API](#unraid-use)
+      - [Logging](#logging-level)
+      - [CORS](#cors)  
+   - [ZFS](#unraid-zfs)
+   - [Calling the API](#unraid-use)
 - [Integration with Homepage](#homepage)
     - [Configuration](#homepage-conf)
       - [Available Fields](#available-fields)
@@ -78,11 +79,25 @@ done
 ```
 If no file is specified in the configuration, **the software will attempt to figure it out by running a very quick stress test** (a few seconds) while monitoring plausible files. You can find the result of this search in the application's logs. This method is of questionable reliability, specifying which file should be read is the preferred option. 
 
-#### Logging level <a id="logging"></a>
+#### Logging level <a id="logging-level"></a>
 ```yaml
 loggingLevel: DEBUG
 ```
 Accepted values are `DEBUG` `INFO` `WARN` and `ERROR`, it defaults to `INFO`. 
+
+#### CORS <a id="cors"></a>
+You can specify these CORS headers:
+- Access-Control-Allow-Origin
+- Access-Control-Allow-Methods
+- Access-Control-Allow-Headers
+
+```yaml
+cors:
+  origin: "*"
+  methods: "method, method"
+  headers: "header-name, header-name"
+```
+
 
 ### ZFS <a id="unraid-zfs"></a>
 If any of the mount points listed in the configuration are using ZFS, the application needs to be run as privileged in order to obtain the correct utilization of ZFS datasets. The command `zfs list` is being used to obtain the correct information, as conventional disk reading methods do not seem to work.
@@ -286,7 +301,7 @@ http://your-unraid-ip:24940
 
 ## Integration with Homepage <a id="homepage"></a> 
 ![image](https://github.com/NebN/unraid-simple-monitoring-api/assets/57036949/0175ffbd-fe84-494c-a29f-264f09aae6f3)
-### Configuration <a id="homepage-conf"></a>
+### Homepage configuration <a id="homepage-conf"></a>
 Check out [Hompage's official custom API widget documentation](https://gethomepage.dev/widgets/services/customapi/).  
 Your homepage `services.yaml` should look like this if you want it to look like the above example, showing cache and network data. 
 

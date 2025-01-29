@@ -65,6 +65,13 @@ type Conf struct {
 	CpuTemp      *string             `yaml:"cpuTemp"`
 	Include      []string            `yaml:"include"`
 	Exclude      []string            `yaml:"exclude"`
+	Cors         *Cors               `yaml:"cors"`
+}
+
+type Cors struct {
+	Origin  string `yaml:"origin"`
+	Methods string `yaml:"methods"`
+	Headers string `yaml:"headers"`
 }
 
 func readConf(path string) (Conf, error) {
@@ -87,12 +94,14 @@ type handler struct {
 	DiskMonitor    monitor.DiskMonitor
 	CpuMonitor     monitor.CpuMonitor
 	MemoryMonitor  monitor.MemoryMonitor
+	Cors           *Cors
 }
 
 func NewHandler(conf Conf) (handler handler) {
 	handler.DiskMonitor = monitor.NewDiskMonitor(conf.Disks)
 	handler.NetworkMonitor = monitor.NewNetworkMonitor(conf.Networks)
 	handler.CpuMonitor = monitor.NewCpuMonitor(conf.CpuTemp)
+	handler.Cors = conf.Cors
 	return
 }
 
@@ -123,8 +132,13 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Error:        nil,
 	}
 
-	responseJson, err := json.Marshal(response)
 	w.Header().Set("Content-Type", "application/json")
+	if h.Cors != nil {
+		w.Header().Set("Access-Control-Allow-Origin", h.Cors.Origin)
+		w.Header().Set("Access-Control-Allow-Methods", h.Cors.Methods)
+		w.Header().Set("Access-Control-Allow-Headers", h.Cors.Headers)
+	}
+	responseJson, err := json.Marshal(response)
 	if err != nil {
 		slog.Error("Error trying to respond to API call",
 			slog.String("error", err.Error()),
