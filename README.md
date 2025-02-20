@@ -13,12 +13,15 @@ Originally created for [Unraid](https://unraid.net/) for use with [Homepage](htt
 
 ## Table of Contents
 - [Utilization with Unraid](#unraid)
-   - [Installation](#unraid-install)
-   - [Configuration](#unraid-conf)
-   - [ZFS](#unraid-zfs)
-   - [Calling the API](#unraid-use)
+    - [Installation](#unraid-install)
+    - [Configuration](#unraid-conf)
+      - [Additional pools](#pools)
+      - [CPU Temperature](#cpu-temp)
+      - [Logging](#logging)
+    - [ZFS](#unraid-zfs)
+    - [Calling the API](#unraid-use)
 - [Integration with Homepage](#homepage)
-   - [Configuration](#homepage-conf)
+    - [Configuration](#homepage-conf)
       - [Available Fields](#available-fields)
 - [How reliable are the measurements?](#caveat)
 - [Installing a QA build](#qa)
@@ -47,8 +50,18 @@ disks:
     - /mnt/disk1
     - /mnt/disk2
 ```
+#### Additional pools <a id="pools"></a>
+You can add any number of custom disk pools.
+```yaml
+disks:
+  poolname:
+    - /mnt/pooldisk1
+    - /mnt/pooldisk2
+  anotherpool:
+    - /mnt/anotherdisk
+```
 
-#### CPU Temperature file
+#### CPU Temperature file <a id="cpu-temp"></a>
 You can specify which file to read to obtain the correct CPU temperature.
 ```yaml
 cpuTemp: /path/to/temp/file
@@ -65,7 +78,7 @@ done
 ```
 If no file is specified in the configuration, **the software will attempt to figure it out by running a very quick stress test** (a few seconds) while monitoring plausible files. You can find the result of this search in the application's logs. This method is of questionable reliability, specifying which file should be read is the preferred option. 
 
-#### Logging level
+#### Logging level <a id="logging"></a>
 ```yaml
 loggingLevel: DEBUG
 ```
@@ -89,8 +102,8 @@ Make a request to
 ```
 http://your-unraid-ip:24940
 ```
-
-The response will be shaped this way.
+<details>
+  <summary>Click to view an example JSON response</summary>
 
 ```json
 {
@@ -142,6 +155,45 @@ The response will be shaped this way.
          "is_spinning":true
       }
    ],
+   "pools": [
+    {
+      "name": "poolname",
+      "total": {
+        "mount": "/mnt/disk*",
+        "total": 6517,
+        "used": 5478,
+        "free": 1039,
+        "used_percent": 84.06,
+        "free_percent": 15.94,
+        "temp": 0,
+        "disk_id": "WDC_WD40EFPX-1234567_WD-WXC12345678C WDC_WD40EFPX-1234567_WD-WXC12345678C",
+        "is_spinning": false
+      },
+      "disks": [
+        {
+          "mount": "/mnt/disk1",
+          "total": 3724,
+          "used": 3262,
+          "free": 462,
+          "used_percent": 87.59,
+          "free_percent": 12.41,
+          "temp": 0,
+          "disk_id": "WDC_WD40EFPX-1234567_WD-WXC12345678C",
+          "is_spinning": false
+        },
+        {
+          "mount": "/mnt/disk5",
+          "total": 2793,
+          "used": 2216,
+          "free": 577,
+          "used_percent": 79.34,
+          "free_percent": 20.66,
+          "temp": 0,
+          "disk_id": "WDC_WD40EFPX-1234567_WD-WXC12345678C",
+          "is_spinning": false
+        }
+      ]
+   }],
    "parity":[
       {
          "name":"parity",
@@ -230,6 +282,8 @@ The response will be shaped this way.
 }
 ```
 
+</details>
+
 ## Integration with Homepage <a id="homepage"></a> 
 ![image](https://github.com/NebN/unraid-simple-monitoring-api/assets/57036949/0175ffbd-fe84-494c-a29f-264f09aae6f3)
 ### Configuration <a id="homepage-conf"></a>
@@ -295,6 +349,33 @@ Your homepage `services.yaml` should look like this if you want it to look like 
       0: free 
       # '0' is the index of the disk, 0 = the first 
       # 'free' is the field you wish to read
+  label: your label
+  format: number
+  suffix: GiB
+```
+<br>
+
+##### Custom pool
+```yaml
+- field:
+    pools:
+      0:
+        total: free
+      # '0' is the index of the pool, 0 = the first 
+      # 'free' is the field you wish to read
+  label: your label
+  format: number
+  suffix: GiB
+```
+<br>
+
+##### Specific disk in custom pool
+```yaml
+- field:
+    pools:
+      0: # '0' is the index of the pool, 0 = the first 
+        disks: # reading 'disks' list
+          0: free # '0' is the index of the disk in the list
   label: your label
   format: number
   suffix: GiB

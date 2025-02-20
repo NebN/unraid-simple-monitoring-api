@@ -19,6 +19,11 @@ import (
 
 const parityLabel = "parity"
 
+type Pool struct {
+	Name   string   `yaml:"name"`
+	Mounts []string `yaml:"mounts"`
+}
+
 type DiskStatus struct {
 	Name        string  `json:"-"`
 	Path        string  `json:"mount"`
@@ -39,6 +44,12 @@ type ParityStatus struct {
 	IsSpinning bool   `json:"is_spinning"`
 }
 
+type PoolStatus struct {
+	Name  string       `json:"name"`
+	Total DiskStatus   `json:"total"`
+	Disks []DiskStatus `json:"disks"`
+}
+
 type DiskIni struct {
 	Id       string
 	Temp     uint64
@@ -46,8 +57,7 @@ type DiskIni struct {
 }
 
 type DiskMonitor struct {
-	cache    []string
-	array    []string
+	pools    []Pool
 	checkZfs bool
 }
 
@@ -59,9 +69,15 @@ type ZfsDataset struct {
 	Mountpoint string
 }
 
-func NewDiskMonitor(cache []string, array []string) (dm DiskMonitor) {
-	dm.cache = cache
-	dm.array = array
+func NewDiskMonitor(disks map[string][]string) (dm DiskMonitor) {
+	pools := make([]Pool, 0, len(disks))
+	for name, mounts := range disks {
+		pools = append(pools, Pool{
+			Name:   name,
+			Mounts: mounts,
+		})
+	}
+	dm.pools = pools
 
 	checkZfsString := os.Getenv("ZFS_OK")
 	checkZfsBool, err := strconv.ParseBool(checkZfsString)
@@ -82,7 +98,14 @@ func NewDiskMonitor(cache []string, array []string) (dm DiskMonitor) {
 	return
 }
 
-func (monitor *DiskMonitor) ComputeDiskUsage() ([]DiskStatus, []DiskStatus, []ParityStatus) {
+type DiskUsage struct {
+	Array []DiskStatus
+	Cache []DiskStatus
+	Party []ParityStatus
+	Pools []PoolStatus
+}
+
+func (monitor *DiskMonitor) ComputeDiskUsage() DiskUsage {
 	diskIniMap := readDiskIni()
 
 	var wg sync.WaitGroup
@@ -122,8 +145,26 @@ func (monitor *DiskMonitor) ComputeDiskUsage() ([]DiskStatus, []DiskStatus, []Pa
 		return disks
 	}
 
-	cache := computeGroup(monitor.cache)
-	array := computeGroup(monitor.array)
+	poolsStatus := make([]PoolStatus, 0, len(monitor.pools))
+	var array PoolStatus
+	var cache PoolStatus
+
+	for _, pool := range monitor.pools {
+		disks := computeGroup(pool.Mounts)
+		total := AggregateDiskStatuses(disks)
+		status := PoolStatus{
+			Name:  pool.Name,
+			Total: total,
+			Disks: disks,
+		}
+		if pool.Name == "array" {
+			array = status
+		} else if pool.Name == "cache" {
+			cache = status
+		} else {
+			poolsStatus = append(poolsStatus, status)
+		}
+	}
 
 	parity := make([]ParityStatus, 0)
 	for name, diskIni := range diskIniMap {
@@ -140,7 +181,12 @@ func (monitor *DiskMonitor) ComputeDiskUsage() ([]DiskStatus, []DiskStatus, []Pa
 	sort.Slice(parity, func(i, j int) bool {
 		return parity[i].Name < parity[j].Name
 	})
-	return cache, array, parity
+	return DiskUsage{
+		Array: array.Disks,
+		Cache: cache.Disks,
+		Pools: poolsStatus,
+		Party: parity,
+	}
 }
 
 func diskUsage(index int, path string, wg *sync.WaitGroup, diskChan chan util.IndexedValue[DiskStatus]) {

@@ -59,15 +59,12 @@ func main() {
 }
 
 type Conf struct {
-	Networks []string `yaml:"networks"`
-	Disks    struct {
-		Cache []string `yaml:"cache"`
-		Array []string `yaml:"array"`
-	} `yaml:"disks"`
-	LoggingLevel string   `yaml:"loggingLevel"`
-	CpuTemp      *string  `yaml:"cpuTemp"`
-	Include      []string `yaml:"include"`
-	Exclude      []string `yaml:"exclude"`
+	Networks     []string            `yaml:"networks"`
+	Disks        map[string][]string `yaml:"disks"`
+	LoggingLevel string              `yaml:"loggingLevel"`
+	CpuTemp      *string             `yaml:"cpuTemp"`
+	Include      []string            `yaml:"include"`
+	Exclude      []string            `yaml:"exclude"`
 }
 
 func readConf(path string) (Conf, error) {
@@ -93,7 +90,7 @@ type handler struct {
 }
 
 func NewHandler(conf Conf) (handler handler) {
-	handler.DiskMonitor = monitor.NewDiskMonitor(conf.Disks.Cache, conf.Disks.Array)
+	handler.DiskMonitor = monitor.NewDiskMonitor(conf.Disks)
 	handler.NetworkMonitor = monitor.NewNetworkMonitor(conf.Networks)
 	handler.CpuMonitor = monitor.NewCpuMonitor(conf.CpuTemp)
 	return
@@ -103,18 +100,19 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	slog.Debug("Request received", slog.String("request", fmt.Sprintf("%+v\n", r)))
 
-	cache, array, parity := h.DiskMonitor.ComputeDiskUsage()
+	diskUsage := h.DiskMonitor.ComputeDiskUsage()
 	network := h.NetworkMonitor.ComputeNetworkRate()
-	cacheTotal := monitor.AggregateDiskStatuses(cache)
-	arrayTotal := monitor.AggregateDiskStatuses(array)
+	cacheTotal := monitor.AggregateDiskStatuses(diskUsage.Cache)
+	arrayTotal := monitor.AggregateDiskStatuses(diskUsage.Array)
 	networkTotal := monitor.AggregateNetworkRates(network)
 	cpu, cores := h.CpuMonitor.ComputeCpuStatus()
 	memory := h.MemoryMonitor.ComputeMemoryUsage()
 
 	response := Report{
-		Cache:        cache,
-		Array:        array,
-		Parity:       parity,
+		Cache:        diskUsage.Cache,
+		Array:        diskUsage.Array,
+		Pools:        diskUsage.Pools,
+		Parity:       diskUsage.Party,
 		Network:      network,
 		ArrayTotal:   arrayTotal,
 		CacheTotal:   cacheTotal,
@@ -142,6 +140,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 type Report struct {
 	Array        []monitor.DiskStatus   `json:"array"`
 	Cache        []monitor.DiskStatus   `json:"cache"`
+	Pools        []monitor.PoolStatus   `json:"pools"`
 	Parity       []monitor.ParityStatus `json:"parity"`
 	Network      []monitor.NetworkRate  `json:"network"`
 	ArrayTotal   monitor.DiskStatus     `json:"array_total"`
