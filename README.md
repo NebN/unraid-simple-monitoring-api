@@ -464,15 +464,44 @@ Your homepage `services.yaml` should look like this if you want it to look like 
 <br>
 
 > [!TIP]
-> If you wish to show more than the usual 4 allowed fields, you can set the widget property `display: list` to have the fields displayed in a vertical list that can be arbitrarily long.
+> If you wish to show more than the usual 4 allowed fields, there are two solutions:
+> - you can set the widget property `display: list` to have the fields displayed in a vertical list that can be arbitrarily long
 > ```yaml
 > widget:
 >   type: customapi
+>   url: http://<unraid-ip>:24940
 >   display: list
 >   mappings:
 >      ...
 > ```
 > ![image](https://github.com/NebN/unraid-simple-monitoring-api/assets/57036949/ed4b694c-ac76-4516-a722-573510e0271c)
+>
+> <br>
+>
+> - instead of `widget` you can use `widgets` and specify a list of widgets, each one is able to display up to 4 fields
+> ```yaml
+> widgets:
+>   - type: customapi
+>     url: http://<unraid-ip>:24940
+>     method: GET
+>       mappings:   
+>         ...
+>
+>   - type: customapi
+>     url: http://<unraid-ip>:24940
+>     method: GET
+>       mappings:   
+>         ...
+> ```
+> ![image](https://github.com/user-attachments/assets/f0ae80ab-2884-4bca-90cb-e52c94baa891)
+>
+> <br>
+>   
+> You can also combine the two:
+> ![image](https://github.com/user-attachments/assets/209db47f-9d96-47f2-9e1d-89fd74f0d93a)
+
+
+
 
 
 
