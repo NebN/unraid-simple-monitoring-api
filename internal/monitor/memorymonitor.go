@@ -14,16 +14,19 @@ var memTotalRegex = regexp.MustCompile(`MemTotal:\s+(\d+)`)
 var memAvailableRegex = regexp.MustCompile(`MemAvailable:\s+(\d+)`)
 
 type MemoryStatus struct {
-	Total       uint64  `json:"total"`
-	Used        uint64  `json:"used"`
-	Free        uint64  `json:"free"`
+	Total       float64 `json:"total"`
+	Used        float64 `json:"used"`
+	Free        float64 `json:"free"`
 	UsedPercent float64 `json:"used_percent"`
 	FreePercent float64 `json:"free_percent"`
 }
 
-type MemoryMonitor struct{}
+type MemoryMonitor struct {
+	kibiBytesToCorrectUnit func(float64) float64
+}
 
-func NewMemoryMonitor() (mm MemoryMonitor) {
+func NewMemoryMonitor(unit string) (mm MemoryMonitor) {
+	mm.kibiBytesToCorrectUnit = util.SizeConvertionFunction(util.KIBI, unit)
 	return
 }
 
@@ -36,10 +39,10 @@ func (monitor *MemoryMonitor) ComputeMemoryUsage() (status MemoryStatus) {
 	}
 	defer meminfo.Close()
 
-	findGroup := func(r *regexp.Regexp, s string) (uint64, bool) {
+	findGroup := func(r *regexp.Regexp, s string) (float64, bool) {
 		res := r.FindStringSubmatch(s)
 		if len(res) > 1 {
-			parsed, err := strconv.ParseUint(res[1], 10, 64)
+			parsed, err := strconv.ParseFloat(res[1], 64)
 			if err != nil {
 				slog.Error("Memory cannot parse value from /proc/meminfo",
 					slog.String("parsing", res[1]),
@@ -60,7 +63,7 @@ func (monitor *MemoryMonitor) ComputeMemoryUsage() (status MemoryStatus) {
 		if status.Total == 0 {
 			memTotal, found := findGroup(memTotalRegex, line)
 			if found {
-				status.Total = util.KibiBytesToMebiBytes(memTotal)
+				status.Total = monitor.kibiBytesToCorrectUnit(memTotal)
 				slog.Debug("Memory total parsed", "total_MiB", status.Total)
 			}
 		}
@@ -68,7 +71,7 @@ func (monitor *MemoryMonitor) ComputeMemoryUsage() (status MemoryStatus) {
 		if status.Free == 0 {
 			memAvailable, found := findGroup(memAvailableRegex, line)
 			if found {
-				status.Free = util.KibiBytesToMebiBytes(memAvailable)
+				status.Free = monitor.kibiBytesToCorrectUnit(memAvailable)
 				slog.Debug("Memory free parsed", "free_MiB", status.Free)
 			}
 		}
@@ -85,8 +88,8 @@ func (monitor *MemoryMonitor) ComputeMemoryUsage() (status MemoryStatus) {
 
 	status.Used = status.Total - status.Free
 	if status.Total > 0 {
-		status.FreePercent = util.RoundTwoDecimals((float64(status.Free) / float64(status.Total)) * 100)
-		status.UsedPercent = util.RoundTwoDecimals(100 - status.FreePercent)
+		status.FreePercent = ((status.Free / status.Total) * 100)
+		status.UsedPercent = 100 - status.FreePercent
 	} else {
 		slog.Warn("Memory total is 0, free/used percent will be returned as 0")
 	}

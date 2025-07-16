@@ -1,9 +1,22 @@
 package util
 
-import "math"
+import (
+	"math"
+)
 
-func RoundTwoDecimals(n float64) float64 {
-	return math.Round(n*100) / 100
+type Float interface {
+	~float64
+}
+
+func RoundNDecimals[T Float](n int) func(T) T {
+	scale := math.Pow10(n)
+	return func(v T) T {
+		return T(math.Round(float64(v)*scale) / scale)
+	}
+}
+
+func RoundTwoDecimals[T Float](n T) T {
+	return RoundNDecimals[T](2)(n)
 }
 
 func Average(xs []float64) float64 {

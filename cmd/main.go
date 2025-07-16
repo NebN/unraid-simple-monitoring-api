@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/NebN/unraid-simple-monitoring-api/internal/conf"
 	"github.com/NebN/unraid-simple-monitoring-api/internal/monitor"
 	"gopkg.in/yaml.v3"
 )
@@ -19,7 +20,7 @@ func main() {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	mux := http.NewServeMux()
 	confPath := os.Getenv("CONF_PATH")
-	conf, err := readConf(confPath)
+	configuration, err := conf.ReadConf(confPath)
 	if err != nil {
 		switch err := err.(type) {
 		case *os.PathError:
@@ -42,13 +43,13 @@ func main() {
 		return
 	} else {
 		var loggingLevel slog.Level
-		loggingLevel.UnmarshalText([]byte(conf.LoggingLevel))
+		loggingLevel.UnmarshalText([]byte(configuration.LoggingLevel))
 		slog.SetLogLoggerLevel(loggingLevel)
 		slog.Info("Logging", slog.String("level", loggingLevel.Level().String()))
-		slog.Debug("Configuration", "conf", conf)
+		slog.Debug("Configuration", "conf", configuration)
 	}
 
-	rootHandler := NewHandler(conf)
+	rootHandler := NewHandler(configuration)
 	mux.Handle("/", &rootHandler)
 
 	slog.Info(fmt.Sprintf("API running on port %s ...", PORT))
@@ -58,49 +59,19 @@ func main() {
 	}
 }
 
-type Conf struct {
-	Networks     []string            `yaml:"networks"`
-	Disks        map[string][]string `yaml:"disks"`
-	LoggingLevel string              `yaml:"loggingLevel"`
-	CpuTemp      *string             `yaml:"cpuTemp"`
-	Include      []string            `yaml:"include"`
-	Exclude      []string            `yaml:"exclude"`
-	Cors         *Cors               `yaml:"cors"`
-}
-
-type Cors struct {
-	Origin  string `yaml:"origin"`
-	Methods string `yaml:"methods"`
-	Headers string `yaml:"headers"`
-}
-
-func readConf(path string) (Conf, error) {
-	conf := Conf{}
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return conf, err
-	}
-
-	err = yaml.Unmarshal(content, &conf)
-	if err != nil {
-		return conf, err
-	}
-
-	return conf, nil
-}
-
 type handler struct {
 	NetworkMonitor monitor.NetworkMonitor
 	DiskMonitor    monitor.DiskMonitor
 	CpuMonitor     monitor.CpuMonitor
 	MemoryMonitor  monitor.MemoryMonitor
-	Cors           *Cors
+	Cors           *conf.Cors
 }
 
-func NewHandler(conf Conf) (handler handler) {
-	handler.DiskMonitor = monitor.NewDiskMonitor(conf.Disks)
+func NewHandler(conf conf.Conf) (handler handler) {
+	handler.DiskMonitor = monitor.NewDiskMonitor(conf.Disks, conf.Units)
 	handler.NetworkMonitor = monitor.NewNetworkMonitor(conf.Networks)
 	handler.CpuMonitor = monitor.NewCpuMonitor(conf.CpuTemp)
+	handler.MemoryMonitor = monitor.NewMemoryMonitor(conf.Units.Memory)
 	handler.Cors = conf.Cors
 	return
 }

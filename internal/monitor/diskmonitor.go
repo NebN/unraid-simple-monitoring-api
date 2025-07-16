@@ -12,12 +12,15 @@ import (
 
 	"log/slog"
 
+	"github.com/NebN/unraid-simple-monitoring-api/internal/conf"
 	"github.com/NebN/unraid-simple-monitoring-api/internal/util"
 	"github.com/shirou/gopsutil/disk"
 	"gopkg.in/ini.v1"
 )
 
 const parityLabel = "parity"
+const arrayLabel = "array"
+const cacheLabel = "cache"
 
 type Pool struct {
 	Name   string   `yaml:"name"`
@@ -27,9 +30,9 @@ type Pool struct {
 type DiskStatus struct {
 	Name        string  `json:"-"`
 	Path        string  `json:"mount"`
-	Total       uint64  `json:"total"`
-	Used        uint64  `json:"used"`
-	Free        uint64  `json:"free"`
+	Total       float64 `json:"total"`
+	Used        float64 `json:"used"`
+	Free        float64 `json:"free"`
 	UsedPercent float64 `json:"used_percent"`
 	FreePercent float64 `json:"free_percent"`
 	Temp        uint64  `json:"temp"`
@@ -57,8 +60,9 @@ type DiskIni struct {
 }
 
 type DiskMonitor struct {
-	pools    []Pool
-	checkZfs bool
+	pools              []Pool
+	checkZfs           bool
+	bytesToCorrectUnit util.MapWithDefault[string, func(float64) float64]
 }
 
 type ZfsDataset struct {
@@ -69,7 +73,20 @@ type ZfsDataset struct {
 	Mountpoint string
 }
 
-func NewDiskMonitor(disks map[string][]string) (dm DiskMonitor) {
+func NewDiskMonitor(disks map[string][]string, units conf.Units) (dm DiskMonitor) {
+	var conversionFunctionsMap = make(map[string]func(float64) float64)
+
+	conversionFunctionsMap[arrayLabel] = util.SizeConvertionFunction(util.BYTE, units.Array)
+
+	conversionFunctionsMap[cacheLabel] = util.SizeConvertionFunction(util.BYTE, units.Cache)
+
+	conversionFunctionsMapWithDefault := util.NewMapWithDefault(
+		conversionFunctionsMap,
+		util.SizeConvertionFunction(util.BYTE, units.Pools),
+	)
+
+	dm.bytesToCorrectUnit = conversionFunctionsMapWithDefault
+
 	pools := make([]Pool, 0, len(disks))
 	for name, mounts := range disks {
 		pools = append(pools, Pool{
@@ -112,26 +129,26 @@ func (monitor *DiskMonitor) ComputeDiskUsage() DiskUsage {
 
 	zfsDatasets := monitor.readZfsDatasets()
 
-	computeGroup := func(paths []string) []DiskStatus {
-		diskChan := make(chan util.IndexedValue[DiskStatus], len(paths))
+	computeGroup := func(pool Pool) []DiskStatus {
+		diskChan := make(chan util.IndexedValue[DiskStatus], len(pool.Mounts))
 
-		for i, path := range paths {
+		for i, path := range pool.Mounts {
 			dataset, exists := zfsDatasets[path]
 			if exists {
 				diskChan <- util.IndexedValue[DiskStatus]{
 					Index: i,
-					Value: zfsDatasetUsage(dataset),
+					Value: zfsDatasetUsage(dataset, monitor.bytesToCorrectUnit.Get(pool.Name)),
 				}
 			} else {
 				wg.Add(1)
-				go diskUsage(i, path, &wg, diskChan)
+				go diskUsage(i, path, monitor.bytesToCorrectUnit.Get(pool.Name), &wg, diskChan)
 			}
 		}
 
 		wg.Wait()
 		close(diskChan)
 
-		disks := make([]DiskStatus, len(paths))
+		disks := make([]DiskStatus, len(pool.Mounts))
 		for disk := range diskChan {
 			diskIni := diskIniMap[disk.Value.Name]
 
@@ -150,16 +167,16 @@ func (monitor *DiskMonitor) ComputeDiskUsage() DiskUsage {
 	var cache PoolStatus
 
 	for _, pool := range monitor.pools {
-		disks := computeGroup(pool.Mounts)
+		disks := computeGroup(pool)
 		total := AggregateDiskStatuses(disks)
 		status := PoolStatus{
 			Name:  pool.Name,
 			Total: total,
 			Disks: disks,
 		}
-		if pool.Name == "array" {
+		if pool.Name == arrayLabel {
 			array = status
-		} else if pool.Name == "cache" {
+		} else if pool.Name == cacheLabel {
 			cache = status
 		} else {
 			poolsStatus = append(poolsStatus, status)
@@ -189,7 +206,13 @@ func (monitor *DiskMonitor) ComputeDiskUsage() DiskUsage {
 	}
 }
 
-func diskUsage(index int, path string, wg *sync.WaitGroup, diskChan chan util.IndexedValue[DiskStatus]) {
+func diskUsage(
+	index int,
+	path string,
+	bytesToUnit func(float64) float64,
+	wg *sync.WaitGroup,
+	diskChan chan util.IndexedValue[DiskStatus]) {
+
 	defer wg.Done()
 
 	var pathToQuery = path
@@ -206,16 +229,16 @@ func diskUsage(index int, path string, wg *sync.WaitGroup, diskChan chan util.In
 		slog.Error("Disk cannot read", slog.String("path", path), slog.String("error", err.Error()))
 		diskChan <- util.IndexedValue[DiskStatus]{Index: index, Value: DiskStatus{Path: path}}
 	} else {
-		total := util.BytesToGibiBytes(usage.Total)
-		free := util.BytesToGibiBytes(usage.Free)
+		total := bytesToUnit(float64(usage.Total))
+		free := bytesToUnit(float64(usage.Free))
 		used := total - free
 
 		freePercent := 0.0
 		usedPercent := 0.0
 
 		if total > 0 {
-			freePercent = util.RoundTwoDecimals((float64(free) / float64(total)) * 100)
-			usedPercent = util.RoundTwoDecimals(100 - freePercent)
+			freePercent = (free / total) * 100
+			usedPercent = 100 - freePercent
 		} else {
 			slog.Warn("Disk total size is 0, free/used percent will be returned as 0", slog.String("disk", path))
 		}
@@ -236,19 +259,19 @@ func diskUsage(index int, path string, wg *sync.WaitGroup, diskChan chan util.In
 	}
 }
 
-func zfsDatasetUsage(dataset ZfsDataset) DiskStatus {
+func zfsDatasetUsage(dataset ZfsDataset, bytesToUnit func(float64) float64) DiskStatus {
 	usedBytes, _ := util.ParseZfsSize(dataset.Used)
-	used := util.BytesToGibiBytes(usedBytes)
 	freeBytes, _ := util.ParseZfsSize(dataset.Avail)
-	free := util.BytesToGibiBytes(freeBytes)
-	total := used + free
+	used := bytesToUnit(usedBytes)
+	free := bytesToUnit(freeBytes)
+	total := usedBytes + freeBytes
 
 	freePercent := 0.0
 	usedPercent := 0.0
 
 	if total > 0 {
-		freePercent = util.RoundTwoDecimals((float64(free) / float64(total)) * 100)
-		usedPercent = util.RoundTwoDecimals(100 - freePercent)
+		freePercent = (free / total) * 100
+		usedPercent = 100 - freePercent
 	} else {
 		slog.Warn("Disk ZFS dataset total size is 0, free/used percent will be returned as 0", slog.String("dataset", dataset.Mountpoint))
 	}
@@ -325,6 +348,7 @@ func readDiskIni() map[string]DiskIni {
 	disks, err := ini.Load(pathToQuery)
 	if err != nil {
 		slog.Error("Disk unable to read disks.ini", "error", slog.String("error", err.Error()))
+		return make(map[string]DiskIni)
 	}
 
 	for _, section := range disks.Sections() {
@@ -398,8 +422,8 @@ func AggregateDiskStatuses(disks []DiskStatus) (status DiskStatus) {
 	status.Free = status.Total - status.Used
 
 	if status.Total > 0 {
-		status.FreePercent = util.RoundTwoDecimals(float64(status.Free) / float64(status.Total) * 100)
-		status.UsedPercent = util.RoundTwoDecimals(100 - status.FreePercent)
+		status.FreePercent = (status.Free / status.Total) * 100
+		status.UsedPercent = 100 - status.FreePercent
 	} else {
 		slog.Warn("Disk aggregation total space is 0, free/used percent will be returned as 0")
 	}
