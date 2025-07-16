@@ -2,6 +2,12 @@
 ![GitHub commits since latest release](https://img.shields.io/github/commits-since/nebn/unraid-simple-monitoring-api/latest?style=for-the-badge)
 ![GitHub last commit](https://img.shields.io/github/last-commit/nebn/unraid-simple-monitoring-api?style=for-the-badge)
 
+
+> [!NOTE]  
+> From version 0.4 disk and memory measurements include decimals. You can decide which units to use.
+> If you're using `number` is Homepage's `services.yaml` values will still show as whole numbers, if you wish to display decimals you can change `number` to `float`.
+> Percentages will also include more decimal places, all rounding logic has been removed from the API, and the raw floats will be returned. Homepage's `format: percent` will format percentages appropriately.
+
 # Unraid Simple Monitoring API
 Simple REST API to monitor basic metrics, currently supports:
 - Disk utilization and status
@@ -16,6 +22,7 @@ Originally created for [Unraid](https://unraid.net/) for use with [Homepage](htt
    - [Installation](#unraid-install)
    - [Configuration](#unraid-conf)
       - [Additional pools](#pools)
+      - [Custom units](#units)
       - [CPU Temperature](#cpu-temp)
       - [Logging](#logging-level)
       - [CORS](#cors)  
@@ -61,6 +68,21 @@ disks:
   anotherpool:
     - /mnt/anotherdisk
 ```
+
+#### Custom units <a id="units"></a>
+You can choose which units the measuresments should use.
+Accepted values are `B` (bytes),`Ki` (KibiBytes),`K` (KiloBytes) up to [`Qi` and `Q`](https://en.wikipedia.org/wiki/Metric_prefix).
+If no unit is specified, a default value will be used.
+```yaml
+units:
+  array: Ti # Default Gi
+  cache: Gi # Default Gi
+  pools: Ti # Default Gi
+  memory: M # Default Mi
+```
+> [!TIP]  
+> Use `float` in your homepage configuration if you wish to see decimals for bigger units, `number` will round down to the nearest integer.
+
 
 #### CPU Temperature file <a id="cpu-temp"></a>
 You can specify which file to read to obtain the correct CPU temperature.
@@ -122,178 +144,166 @@ http://your-unraid-ip:24940
 
 ```json
 {
-   "array":[
-      {
-         "mount":"/mnt/disk1",
-         "total":3724,
-         "used":1864,
-         "free":1860,
-         "used_percent":50.05,
-         "free_percent":49.95,
-         "temp":32,
-         "disk_id":"WDC_WD40EFPX-1234567_WD-WXC12345678A",
-         "is_spinning":true
-      },
-      {
-         "mount":"/mnt/disk2",
-         "total":3724,
-         "used":1366,
-         "free":2358,
-         "used_percent":36.68,
-         "free_percent":63.32,
-         "temp":34,
-         "disk_id":"WDC_WD40EFPX-1234567_WD-WXC12345678B",
-         "is_spinning":true
-      },
-      {
-         "mount":"/mnt/disk3",
-         "total":931,
-         "used":7,
-         "free":924,
-         "used_percent":0.75,
-         "free_percent":99.25,
-         "temp":0,
-         "disk_id":"WDC_WD40EFPX-1234567_WD-WXC12345678C",
-         "is_spinning":false
-      }
-   ],
-   "cache":[
-      {
-         "mount":"/mnt/cache",
-         "total":465,
-         "used":210,
-         "free":255,
-         "used_percent":45.16,
-         "free_percent":54.84,
-         "temp":37,
-         "disk_id":"Samsung_SSD_870_EVO_1TB_S123456789",
-         "is_spinning":true
-      }
-   ],
-   "pools": [
+  "array": [
     {
-      "name": "poolname",
-      "total": {
-        "mount": "/mnt/disk*",
-        "total": 6517,
-        "used": 5478,
-        "free": 1039,
-        "used_percent": 84.06,
-        "free_percent": 15.94,
-        "temp": 0,
-        "disk_id": "WDC_WD40EFPX-1234567_WD-WXC12345678C WDC_WD40EFPX-1234567_WD-WXC12345678C",
-        "is_spinning": false
-      },
-      "disks": [
-        {
-          "mount": "/mnt/disk1",
-          "total": 3724,
-          "used": 3262,
-          "free": 462,
-          "used_percent": 87.59,
-          "free_percent": 12.41,
-          "temp": 0,
-          "disk_id": "WDC_WD40EFPX-1234567_WD-WXC12345678C",
-          "is_spinning": false
-        },
-        {
-          "mount": "/mnt/disk5",
-          "total": 2793,
-          "used": 2216,
-          "free": 577,
-          "used_percent": 79.34,
-          "free_percent": 20.66,
-          "temp": 0,
-          "disk_id": "WDC_WD40EFPX-1234567_WD-WXC12345678C",
-          "is_spinning": false
-        }
-      ]
-   }],
-   "parity":[
-      {
-         "name":"parity",
-         "temp":31,
-         "disk_id":"WDC_WD40EFPX-1234567_WD-WXC12345678D",
-         "is_spinning":true
-      },
-      {
-         "name":"parity2",
-         "temp":0,
-         "disk_id":"",
-         "is_spinning":false
-      }
-   ],
-   "network":[
-      {
-         "interface":"docker0",
-         "rx_MiBs":0,
-         "tx_MiBs":0,
-         "rx_Mbps":0,
-         "tx_Mbps":0
-      },
-      {
-         "interface":"eth0",
-         "rx_MiBs":0.02,
-         "tx_MiBs":5.22,
-         "rx_Mbps":0.13,
-         "tx_Mbps":43.8
-      }
-   ],
-   "array_total":{
-      "mount":"/mnt/disk*",
-      "total":13034,
-      "used":3342,
-      "free":9692,
-      "used_percent":25.64,
-      "free_percent":74.36,
-      "disk_id":"WDC_WD40EFPX-1234567_WD-WXC12345678A WDC_WD40EFPX-1234567_WD-WXC12345678B WDC_WD40EFPX-1234567_WD-WXC12345678C"
-   },
-   "cache_total":{
-      "mount":"/mnt/cache",
-      "total":465,
-      "used":210,
-      "free":255,
-      "used_percent":45.16,
-      "free_percent":54.84,
-      "disk_id":"Samsung_SSD_870_EVO_1TB_S123456789"
-   },
-   "network_total":{
-      "interface":"docker0 eth0",
-      "rx_MiBs":0.02,
-      "tx_MiBs":5.22,
-      "rx_Mbps":0.13,
-      "tx_Mbps":43.8
-   },
-   "cpu":{
-      "load_percent":10.6,
-      "temp":41
-   },
-   "cores": [
+      "mount": "/mnt/disk1",
+      "total": 3724.20388412476,
+      "used": 3608.56298828125,
+      "free": 115.640895843506,
+      "used_percent": 96.8948827872596,
+      "free_percent": 3.10511721274044,
+      "temp": 0,
+      "disk_id": "WDC_WD40EFPX-1234",
+      "is_spinning": false
+    },
+    {
+      "mount": "/mnt/disk2",
+      "total": 3724.20388412476,
+      "used": 3598.42082977295,
+      "free": 125.783054351807,
+      "used_percent": 96.6225518724153,
+      "free_percent": 3.37744812758466,
+      "temp": 0,
+      "disk_id": "WDC_WD40EFPX-4321",
+      "is_spinning": false
+    },
+    {
+      "mount": "/mnt/disk5",
+      "total": 2793.15542221069,
+      "used": 2692.77926635742,
+      "free": 100.376155853271,
+      "used_percent": 96.4063526485101,
+      "free_percent": 3.59364735148991,
+      "temp": 0,
+      "disk_id": "WDC_WD30EFRX-1243",
+      "is_spinning": false
+    },
+    {
+      "mount": "/mnt/disk6",
+      "total": 1862.10697937012,
+      "used": 1749.14831924438,
+      "free": 112.958660125732,
+      "used_percent": 93.9338254258656,
+      "free_percent": 6.06617457413442,
+      "temp": 0,
+      "disk_id": "WDC_WD2003FZEX-3421",
+      "is_spinning": false
+    },
+    {
+      "mount": "/mnt/disk7",
+      "total": 931.057510375977,
+      "used": 702.875312805176,
+      "free": 228.182197570801,
+      "used_percent": 75.4921479040906,
+      "free_percent": 24.5078520959094,
+      "temp": 0,
+      "disk_id": "Hitachi_4312",
+      "is_spinning": false
+    }
+  ],
+  "cache": [
+    {
+      "mount": "/mnt/cache",
+      "total": 931.512413024902,
+      "used": 204.731128692627,
+      "free": 726.781284332275,
+      "used_percent": 21.978357543063,
+      "free_percent": 78.021642456937,
+      "temp": 0,
+      "disk_id": "Samsung_SSD_870_EVO_1TB_2341",
+      "is_spinning": false
+    }
+  ],
+  "pools": [],
+  "parity": [
+    {
+      "name": "parity",
+      "temp": 0,
+      "disk_id": "WDC_WD80EDBZ-3241",
+      "is_spinning": false
+    },
+    {
+      "name": "parity2",
+      "temp": 0,
+      "disk_id": "",
+      "is_spinning": true
+    }
+  ],
+  "network": [
+    {
+      "interface": "docker0",
+      "rx_MiBs": 0,
+      "tx_MiBs": 0,
+      "rx_Mbps": 0,
+      "tx_Mbps": 0
+    },
+    {
+      "interface": "eth0",
+      "rx_MiBs": 0.240369570881588,
+      "tx_MiBs": 0.00792626055173589,
+      "rx_Mbps": 2.01636610525386,
+      "tx_Mbps": 0.0664902926743761
+    }
+  ],
+  "array_total": {
+    "mount": "/mnt/disk*",
+    "total": 13034.7276802063,
+    "used": 12351.7867164612,
+    "free": 682.940963745117,
+    "used_percent": 94.760604283416,
+    "free_percent": 5.239395716584,
+    "temp": 0,
+    "disk_id": "WDC_WD40EFPX-1234 WDC_WD40EFPX-4321 WDC_WD30EFRX-1243 WDC_WD2003FZEX-3421 Hitachi_4312",
+    "is_spinning": false
+  },
+  "cache_total": {
+    "mount": "/mnt/cache*",
+    "total": 931.512413024902,
+    "used": 204.731128692627,
+    "free": 726.781284332275,
+    "used_percent": 21.978357543063,
+    "free_percent": 78.021642456937,
+    "temp": 0,
+    "disk_id": "Samsung_SSD_870_EVO_1TB_2341",
+    "is_spinning": false
+  },
+  "network_total": {
+    "interface": "docker0 eth0",
+    "rx_MiBs": 0.240369570881588,
+    "tx_MiBs": 0.00792626055173589,
+    "rx_Mbps": 2.01636610525386,
+    "tx_Mbps": 0.0664902926743761
+  },
+  "cpu": {
+    "load_percent": 9.95962314939435,
+    "temp": 33
+  },
+  "cores": [
     {
       "name": "cpu0",
-      "load_percent": 6.55
+      "load_percent": 9.15208613728129
     },
     {
       "name": "cpu1",
-      "load_percent": 8.55
+      "load_percent": 13.1081081081081
     },
     {
       "name": "cpu2",
-      "load_percent": 4.94
+      "load_percent": 7.93010752688172
     },
     {
       "name": "cpu3",
-      "load_percent": 8.37
+      "load_percent": 9.79865771812081
     }
-   ],
-   "memory":{
-      "total":15788,
-      "used":1288,
-      "free":14500,
-      "used_percent":8.16,
-      "free_percent":91.84
-   },
-   "error":null
+  ],
+  "memory": {
+    "total": 15785.82421875,
+    "used": 1387.29296875,
+    "free": 14398.53125,
+    "used_percent": 8.78822004809992,
+    "free_percent": 91.2117799519001
+  },
+  "error": null
 }
 ```
 
@@ -508,9 +518,6 @@ Your homepage `services.yaml` should look like this if you want it to look like 
 ## How reliable are the measurements? <a id="caveat"></a>
 The goal of this API is to be simple, fast, and lightweight.  
 For these reasons, the measurements provided are not as accurate as they could be.
-
-### Disk
-Disk utilization is rounded down to the nearest GiB.
 
 ### Network and CPU
 Both Network and CPU usage need to be measured for some time interval. Typically, to get an accurate measurement, you would monitor these for a few seconds before providing a response.  

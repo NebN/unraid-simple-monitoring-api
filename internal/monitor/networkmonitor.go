@@ -109,10 +109,10 @@ func networkRate(
 	txMiBs, txMbps := ratePerSecond(previousSnapshot.Tx, snapshot.Tx, previousSnapshot.TxTs, snapshot.TxTs)
 
 	rate := NetworkRate{
-		RxMiBs: util.RoundTwoDecimals(rxMiBs),
-		TxMiBs: util.RoundTwoDecimals(txMiBs),
-		RxMbps: util.RoundTwoDecimals(rxMbps),
-		TxMbps: util.RoundTwoDecimals(txMbps),
+		RxMiBs: rxMiBs,
+		TxMiBs: txMiBs,
+		RxMbps: rxMbps,
+		TxMbps: txMbps,
 		Iname:  previousSnapshot.Iname,
 	}
 

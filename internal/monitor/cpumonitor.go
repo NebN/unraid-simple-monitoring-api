@@ -12,8 +12,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/NebN/unraid-simple-monitoring-api/internal/util"
 )
 
 type CoreStatus struct {
@@ -84,7 +82,7 @@ func computeLoad(a CpuSnapshot, b CpuSnapshot) float64 {
 		slog.Warn("CPU delta between snapshots' total values is 0, cpu load percent will be returned as 0")
 	}
 
-	return util.RoundTwoDecimals(loadPercent)
+	return loadPercent
 }
 
 func newCpuSnapshot() (cpu CpuSnapshot, cores []CpuSnapshot) {
