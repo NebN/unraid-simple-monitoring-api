@@ -36,7 +36,28 @@ Originally created for [Unraid](https://unraid.net/) for use with [Homepage](htt
 
 ## Utilization with Unraid <a id="unraid"></a> 
 ### Installation <a id="unraid-install"></a>
-Install from the Unraid community apps
+#### Unraid Community App
+Install from the Unraid community apps. The app is called `unraid-simple-monitoring-api`.
+
+#### Manually
+Install manually using docker compose.
+
+```yaml
+services:
+  unraid-simple-monitoring-api:
+    image: ghcr.io/nebn/unraid-simple-monitoring-api:latest
+    container_name: unraid-simple-monitoring-api
+    privileged: false
+    restart: unless-stopped
+    ports:
+      - '24940:24940'
+    volumes:
+      - /mnt/user/appdata/unraid-simple-monitoring-api:/app
+      - /:/hostfs
+    environment:
+      - CONF_PATH=/app/conf.yml
+      - HOSTFS_PREFIX=/hostfs
+```
 
 ### Configuration <a id="unraid-conf"></a>
 By default the application expects a configuration file in 
