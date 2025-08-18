@@ -31,12 +31,19 @@ type NetworkSnapshot struct {
 type NetworkMonitor struct {
 	snapshots []NetworkSnapshot
 	mu        sync.Mutex
+	fsPrefix  string
 }
 
 func NewNetworkMonitor(inames []string) (monitor NetworkMonitor) {
+	var hostFsPrefix, isSet = os.LookupEnv("HOSTFS_PREFIX")
+	if isSet {
+		slog.Debug("Network host prefix is set", "value", hostFsPrefix)
+		monitor.fsPrefix = hostFsPrefix
+	}
+
 	snapshots := make([]NetworkSnapshot, len(inames))
 	for i, iname := range inames {
-		snapshots[i] = newNetworkSnapshot(iname)
+		snapshots[i] = newNetworkSnapshot(iname, monitor.fsPrefix)
 	}
 	monitor.snapshots = snapshots
 	return
@@ -52,7 +59,7 @@ func (monitor *NetworkMonitor) ComputeNetworkRate() []NetworkRate {
 
 	for i, snapshot := range monitor.snapshots {
 		wg.Add(1)
-		go networkRate(i, snapshot, &wg, snapshotChan, rateChan)
+		go networkRate(i, monitor.fsPrefix, snapshot, &wg, snapshotChan, rateChan)
 	}
 
 	wg.Wait()
@@ -76,6 +83,7 @@ func (monitor *NetworkMonitor) ComputeNetworkRate() []NetworkRate {
 
 func networkRate(
 	index int,
+	fsPrefix string,
 	previousSnapshot NetworkSnapshot,
 	wg *sync.WaitGroup,
 	snapshotChan chan util.IndexedValue[NetworkSnapshot],
@@ -83,7 +91,7 @@ func networkRate(
 
 	defer wg.Done()
 
-	snapshot := newNetworkSnapshot(previousSnapshot.Iname)
+	snapshot := newNetworkSnapshot(previousSnapshot.Iname, fsPrefix)
 
 	ratePerSecond := func(t0Reading uint64, t1Reading uint64, t0 time.Time, t1 time.Time) (float64, float64) {
 		readingDiff := (t1Reading - t0Reading)
@@ -121,7 +129,7 @@ func networkRate(
 	rateChan <- util.IndexedValue[NetworkRate]{Index: index, Value: rate}
 }
 
-func newNetworkSnapshot(iname string) (network NetworkSnapshot) {
+func newNetworkSnapshot(iname string, fsPrefix string) (network NetworkSnapshot) {
 	network.Iname = iname
 
 	usageInBps := func(direction string, c chan uint64, ts chan time.Time) {
@@ -130,7 +138,7 @@ func newNetworkSnapshot(iname string) (network NetworkSnapshot) {
 		defer close(ts)
 
 		now := time.Now()
-		res, err := os.ReadFile(fmt.Sprintf("/sys/class/net/%s/statistics/%s_bytes", iname, direction))
+		res, err := os.ReadFile(fmt.Sprintf("%s/sys/class/net/%s/statistics/%s_bytes", fsPrefix, iname, direction))
 		if err != nil {
 			slog.Error("Network cannot read data", "interface", iname, slog.String("error", err.Error()))
 			return
