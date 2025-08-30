@@ -5,7 +5,7 @@
 
 > [!NOTE]  
 > From version 0.4 disk and memory measurements include decimals. You can decide which units to use.
-> If you're using `number` is Homepage's `services.yaml` values will still show as whole numbers, if you wish to display decimals you can change `number` to `float`.
+> If you're using `number` in Homepage's `services.yaml` values will still show as whole numbers, if you wish to display decimals you can change `number` to `float`.
 > Percentages will also include more decimal places, all rounding logic has been removed from the API, and the raw floats will be returned. Homepage's `format: percent` will format percentages appropriately.
 
 # Unraid Simple Monitoring API
