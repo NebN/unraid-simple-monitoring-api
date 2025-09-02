@@ -37,7 +37,9 @@ Originally created for [Unraid](https://unraid.net/) for use with [Homepage](htt
 ## Utilization with Unraid <a id="unraid"></a> 
 ### Installation <a id="unraid-install"></a>
 #### Unraid Community App
-Install from the Unraid community apps. The app is called `unraid-simple-monitoring-api`.
+Install from the Unraid community apps.
+
+<img width="380" height="259" alt="image" src="https://github.com/user-attachments/assets/6670690f-25d9-420a-9a81-f516e91cf54b" />
 
 #### Manually
 Install manually using docker compose.
